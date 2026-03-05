@@ -16,16 +16,7 @@ service cloud.firestore {
      * - /system_roles/administrators/{userId}: A lookup collection to identify system admins.
      * - /keys/{keyId}: Global inventory of physical assets, readable by all staff.
      * - /assignments/{assignmentId}: Transactional logs of key checkouts.
-     * 
-     * Key Security Decisions:
-     * 1. Admin Identification: Admins are verified via the existence of a document in the 
-     *    /system_roles/administrators collection. This avoids complex object parsing in rules.
-     * 2. Ownership for Writes: Users can only manage their own profiles and their own 
-     *    active assignments (check-ins).
-     * 3. Public Inventory: Key availability is treated as public (authenticated) information 
-     *     to facilitate a real-time dashboard for all staff members.
-     * 4. Relational Integrity: On creation, the system enforces that the 'assignedToUserId' 
-     *    in the assignment data matches the authenticated user's ID.
+     * - /hardware_triggers/{triggerId}: Signals for hardware (ESP32) to unlock solenoids.
      */
 
     // --- Helper Functions ---
@@ -47,25 +38,15 @@ service cloud.firestore {
 
     /**
      * @description Checks if the authenticated user has an administrator record.
-     * This implementation uses "Authorization Independence" via a dedicated roles collection.
      */
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/system_roles/administrators/$(request.auth.uid));
     }
 
-    // The 'isExistingOwner' function was removed as it was unused and contained 
-    // a variable name 'resource' which, while referring to the global context variable, 
-    // was flagged by the linter as an 'Invalid variable name' in this context. 
-    // The explicit 'resource != null' checks are maintained inline where needed.
-
     // --- Collection Rules ---
 
     /**
      * @description User Profile management. Users manage themselves; Admins manage everyone.
-     * @path /user_profiles/{userId}
-     * @allow (get) request.auth.uid == userId
-     * @deny (create) request.auth.uid != userId
-     * @principle Path-based ownership and relational integrity for profile identity.
      */
     match /user_profiles/{userId} {
       allow get, list: if isOwner(userId) || isAdmin();
@@ -76,10 +57,6 @@ service cloud.firestore {
 
     /**
      * @description Global Administrator role registry. Read by all to verify permissions; managed by existing admins.
-     * @path /system_roles/administrators/{userId}
-     * @allow (get) Any signed-in user checking a role.
-     * @deny (create) Non-admin trying to grant themselves admin status.
-     * @principle Role-based access control via a dedicated authorization collection.
      */
     match /system_roles/administrators/{userId} {
       allow get, list: if isSignedIn();
@@ -88,10 +65,6 @@ service cloud.firestore {
 
     /**
      * @description Key inventory. Readable by all for the dashboard; managed strictly by admins.
-     * @path /keys/{keyId}
-     * @allow (list) Any signed-in staff member viewing availability.
-     * @deny (update) Staff member trying to change key location.
-     * @principle Public-read/Admin-write pattern for shared organizational assets.
      */
     match /keys/{keyId} {
       allow get, list: if isSignedIn();
@@ -100,20 +73,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Key assignments (Checkout/Return). Admins see all; users see and create their own.
-     * @path /assignments/{assignmentId}
-     * @allow (create) User checking out a key for themselves.
-     * @deny (get) User trying to view someone else's assignment details.
-     * @principle Relational integrity enforced during creation; access restricted to involved parties.
+     * @description Key assignments (Checkout/Return). 
+     * Updated: Allow all signed-in users (staff) to list activity logs to populate the dashboard.
      */
     match /assignments/{assignmentId} {
-      // Users can only get their own assignments; Admins can see all.
-      allow get: if isAdmin() || (isSignedIn() && resource.data.assignedToUserId == request.auth.uid);
-      
-      // CRITICAL: Path-based or Attribute-based listing. 
-      // Admin can list all. Regular users are restricted from general listing of this top-level collection 
-      // to protect privacy, requiring specific queries or admin rights.
-      allow list: if isAdmin();
+      // Users can get individual assignments; Staff can list all for the activity log.
+      allow get, list: if isSignedIn();
 
       // Users can create assignments only for themselves.
       allow create: if isSignedIn() && request.resource.data.assignedToUserId == request.auth.uid;
@@ -123,6 +88,18 @@ service cloud.firestore {
       
       // Deletions (cancellations) restricted to administrators.
       allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Hardware triggers collection monitored by ESP32.
+     * Allows authenticated users to request unlocks and hardware/admins to manage them.
+     */
+    match /hardware_triggers/{triggerId} {
+      // Any authenticated user can trigger a solenoid unlock request.
+      allow create: if isSignedIn();
+      
+      // Reading, updating, and deleting triggers is allowed for staff/hardware to facilitate processing.
+      allow get, list, update, delete: if isSignedIn();
     }
   }
 }
