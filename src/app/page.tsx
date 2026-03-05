@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -15,6 +16,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   useCollection, 
+  useDoc,
   useUser, 
   useFirestore, 
   useMemoFirebase,
@@ -22,7 +24,7 @@ import {
   initiateGoogleSignIn,
   addDocumentNonBlocking
 } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { INITIAL_ASSIGNEES } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +35,14 @@ export default function Home() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+
+  // Check if user is an admin
+  const adminDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'administrators', user.uid);
+  }, [firestore, user]);
+  const { data: adminData, isLoading: isAdminLoading } = useDoc<any>(adminDocRef);
+  const isAdminUser = !!adminData;
 
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -178,7 +188,7 @@ export default function Home() {
         <TabsContent value="inventory" className="mt-0 p-6 space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-primary">Key Management</h2>
-            <AddKeyDialog />
+            {isAdminUser && <AddKeyDialog />}
           </div>
           <div className="space-y-1">
             {keys.map(key => (

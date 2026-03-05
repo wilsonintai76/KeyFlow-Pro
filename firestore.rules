@@ -1,52 +1,30 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
      * KeyFlow Pro Security Rules
-     * 
-     * Core Philosophy:
-     * This ruleset implements a robust, role-based access control system tailored for key management. 
-     * It prioritizes "Authorization Independence" by using a dedicated collection for administrator 
-     * privileges, ensuring that security checks are performant and decouple permission logic 
-     * from profile data.
-     * 
-     * Data Structure:
-     * - /user_profiles/{userId}: Individual user metadata, secured by path-based ownership.
-     * - /system_roles/administrators/{userId}: A lookup collection to identify system admins.
-     * - /keys/{keyId}: Global inventory of physical assets, readable by all staff.
-     * - /assignments/{assignmentId}: Transactional logs of key checkouts.
-     * - /hardware_triggers/{triggerId}: Signals for hardware (ESP32) to unlock solenoids.
      */
 
     // --- Helper Functions ---
 
-    /**
-     * @description Checks if the request is from an authenticated user.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user's ID matches the provided ID.
-     * @param userId The ID to compare against the auth UID.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the authenticated user has an administrator record.
-     */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/system_roles/administrators/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/administrators/$(request.auth.uid));
     }
 
     // --- Collection Rules ---
 
     /**
-     * @description User Profile management. Users manage themselves; Admins manage everyone.
+     * @description User Profile management.
      */
     match /user_profiles/{userId} {
       allow get, list: if isOwner(userId) || isAdmin();
@@ -56,48 +34,36 @@ service cloud.firestore {
     }
 
     /**
-     * @description Global Administrator role registry. Read by all to verify permissions; managed by existing admins.
+     * @description Administrator registry. Managed manually in Firebase Console.
      */
-    match /system_roles/administrators/{userId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin() && (resource != null || request.method == 'create');
+    match /administrators/{userId} {
+      allow get: if isSignedIn();
+      allow write: if false; 
     }
 
     /**
-     * @description Key inventory. 
-     * Updated: Now allowed for all signed-in staff to facilitate inventory management during setup.
+     * @description Key inventory. Only admins can modify.
      */
     match /keys/{keyId} {
-      allow get, list, create, update, delete: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
      * @description Key assignments (Checkout/Return). 
-     * Updated: Allow all signed-in users (staff) to list activity logs to populate the dashboard.
      */
     match /assignments/{assignmentId} {
-      // Users can get individual assignments; Staff can list all for the activity log.
       allow get, list: if isSignedIn();
-
-      // Users can create assignments only for themselves.
       allow create: if isSignedIn() && request.resource.data.assignedToUserId == request.auth.uid;
-      
-      // Updates allowed for the owner (e.g., returning a key) or admins.
       allow update: if (isAdmin() || (isSignedIn() && resource.data.assignedToUserId == request.auth.uid)) && resource != null;
-      
-      // Deletions (cancellations) restricted to administrators.
       allow delete: if isAdmin() && resource != null;
     }
 
     /**
-     * @description Hardware triggers collection monitored by ESP32.
-     * Allows authenticated users to request unlocks and hardware/admins to manage them.
+     * @description Hardware triggers collection.
      */
     match /hardware_triggers/{triggerId} {
-      // Any authenticated user can trigger a solenoid unlock request.
       allow create: if isSignedIn();
-      
-      // Reading, updating, and deleting triggers is allowed for staff/hardware to facilitate processing.
       allow get, list, update, delete: if isSignedIn();
     }
   }

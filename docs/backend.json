@@ -133,6 +133,19 @@
           },
           "description": "Main collection for managing the inventory of physical keys."
         }
+      },
+      {
+        "path": "/administrators/{userId}",
+        "definition": {
+          "entityName": "AdminRecord",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "uid": { "type": "string" }
+            }
+          },
+          "description": "Lookup collection for system administrators."
+        }
       }
     ]
   }
