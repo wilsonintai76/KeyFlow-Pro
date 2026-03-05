@@ -51,7 +51,7 @@ service cloud.firestore {
     match /user_profiles/{userId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isOwner(userId) || isAdmin()) && resource != null && request.resource.data.id == resource.data.id;
+      allow update: if (isOwner(userId) || isAdmin()) && (resource == null || request.resource.data.id == resource.data.id);
       allow delete: if isAdmin() && resource != null;
     }
 
@@ -64,12 +64,11 @@ service cloud.firestore {
     }
 
     /**
-     * @description Key inventory. Readable by all for the dashboard; managed strictly by admins.
+     * @description Key inventory. 
+     * Updated: Now allowed for all signed-in staff to facilitate inventory management during setup.
      */
     match /keys/{keyId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
+      allow get, list, create, update, delete: if isSignedIn();
     }
 
     /**
