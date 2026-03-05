@@ -94,6 +94,19 @@
         "location",
         "currentStatus"
       ]
+    },
+    "GlobalSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GlobalSettings",
+      "type": "object",
+      "description": "System-wide configuration settings.",
+      "properties": {
+        "maxBorrowDurationHours": {
+          "type": "integer",
+          "description": "Maximum hours a key can be borrowed before considered overdue.",
+          "default": 24
+        }
+      }
     }
   },
   "auth": {
@@ -133,6 +146,16 @@
             "$ref": "#/backend/entities/Key"
           },
           "description": "Main collection for managing the inventory of physical keys."
+        }
+      },
+      {
+        "path": "/settings/{settingId}",
+        "definition": {
+          "entityName": "GlobalSettings",
+          "schema": {
+            "$ref": "#/backend/entities/GlobalSettings"
+          },
+          "description": "Global configuration documents."
         }
       }
     ]

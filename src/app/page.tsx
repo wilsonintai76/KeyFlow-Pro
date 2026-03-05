@@ -1,11 +1,13 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { KeyCard } from '@/components/inventory/KeyCard';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { SystemSettings } from '@/components/admin/SystemSettings';
 import { TransactionHistory } from '@/components/history/TransactionHistory';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
@@ -286,6 +288,18 @@ export default function Home() {
           )}
         </TabsContent>
 
+        <TabsContent value="settings" className="mt-0">
+          {isAdminUser ? (
+            <SystemSettings />
+          ) : (
+            <div className="p-10 text-center">
+              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
+              <h3 className="text-lg font-bold">Access Denied</h3>
+              <p className="text-sm text-muted-foreground">Only administrators can access system settings.</p>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="profile" className="mt-0 p-6">
            <div className="space-y-6">
               <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-3xl shadow-sm border">
@@ -316,7 +330,7 @@ export default function Home() {
         </TabsContent>
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
-          <TabsList className="grid w-full grid-cols-4 bg-transparent gap-1">
+          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : 'grid-cols-4'} bg-transparent gap-1`}>
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
@@ -338,13 +352,33 @@ export default function Home() {
               <History size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Logs</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="users" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
-              <Users size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
-            </TabsTrigger>
+            {isAdminUser && (
+              <TabsTrigger 
+                value="users" 
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <Users size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
+              </TabsTrigger>
+            )}
+            {isAdminUser && (
+              <TabsTrigger 
+                value="settings" 
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <SettingsIcon size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
+              </TabsTrigger>
+            )}
+            {!isAdminUser && (
+              <TabsTrigger 
+                value="profile" 
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <UserIcon size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Me</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
       </Tabs>
