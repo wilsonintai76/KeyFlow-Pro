@@ -48,11 +48,14 @@ service cloud.firestore {
     }
 
     /**
-     * @description Key inventory. Only admins can modify. Guests and Staff can read.
+     * @description Key inventory. Only admins can create. Delete allowed only if status is available.
+     * Manual updates are disabled as per policy.
      */
     match /keys/{keyId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if false; 
+      allow delete: if isAdmin() && resource.data.currentStatus == 'available';
     }
 
     /**

@@ -100,7 +100,6 @@ export default function Home() {
 
   const userRole = profile?.role || 'guest';
   const isAdminUser = userRole === 'admin';
-  const isStaffOnly = userRole === 'staff';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
   const keysQuery = useMemoFirebase(() => {
@@ -241,7 +240,7 @@ export default function Home() {
             ) : (
               <div className="space-y-1">
                 {keys.map(key => (
-                  <KeyCard key={key.id} keyData={key} />
+                  <KeyCard key={key.id} keyData={key} isAdmin={isAdminUser} />
                 ))}
               </div>
             )}
@@ -255,7 +254,7 @@ export default function Home() {
           </div>
           <div className="space-y-1">
             {keys.map(key => (
-              <KeyCard key={key.id} keyData={key} />
+              <KeyCard key={key.id} keyData={key} isAdmin={isAdminUser} />
             ))}
           </div>
         </TabsContent>
