@@ -1,3 +1,4 @@
+
 import { Key, Assignee, Transaction } from './types';
 
 export const INITIAL_KEYS: Key[] = [
@@ -21,7 +22,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     id: 'T001',
     keyId: 'K002',
     assigneeId: 'A001',
-    checkoutDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+    checkoutDate: "2024-03-01T08:00:00.000Z",
     returnDate: null,
     status: 'active'
   },
@@ -29,7 +30,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     id: 'T002',
     keyId: 'K003',
     assigneeId: 'A002',
-    checkoutDate: new Date(Date.now() - 86400000 * 5).toISOString(),
+    checkoutDate: "2024-02-28T10:30:00.000Z",
     returnDate: null,
     status: 'active'
   },
@@ -37,7 +38,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     id: 'T003',
     keyId: 'K006',
     assigneeId: 'A003',
-    checkoutDate: new Date(Date.now() - 3600000 * 4).toISOString(),
+    checkoutDate: "2024-03-04T14:15:00.000Z",
     returnDate: null,
     status: 'active'
   }
