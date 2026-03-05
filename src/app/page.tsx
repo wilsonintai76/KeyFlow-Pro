@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Sparkles, Loader2, LogIn, Unlock, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { KeyCard } from '@/components/inventory/KeyCard';
-import { SmartAssigner } from '@/components/ai/SmartAssigner';
+import { UserManagement } from '@/components/admin/UserManagement';
 import { TransactionHistory } from '@/components/history/TransactionHistory';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
@@ -47,7 +47,6 @@ export default function Home() {
 
   // Initialize profile as guest if it doesn't exist
   useEffect(() => {
-    // Only proceed if loading is finished and profile is explicitly missing
     if (user && !isProfileLoading && profile === null && firestore) {
       const newProfile = {
         id: user.uid,
@@ -231,8 +230,16 @@ export default function Home() {
           <TransactionHistory transactions={transactions} keys={keys} assignees={INITIAL_ASSIGNEES} />
         </TabsContent>
 
-        <TabsContent value="ai" className="mt-0">
-          <SmartAssigner keys={keys} assignees={INITIAL_ASSIGNEES} transactions={transactions} />
+        <TabsContent value="users" className="mt-0">
+          {isAdminUser ? (
+            <UserManagement />
+          ) : (
+            <div className="p-10 text-center">
+              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
+              <h3 className="text-lg font-bold">Access Denied</h3>
+              <p className="text-sm text-muted-foreground">Only administrators can access user management.</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="profile" className="mt-0 p-6">
@@ -284,11 +291,11 @@ export default function Home() {
               <span className="text-[9px] font-bold uppercase tracking-tight">Logs</span>
             </TabsTrigger>
             <TabsTrigger 
-              value="ai" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-accent/20 data-[state=active]:text-primary"
+              value="users" 
+              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
             >
-              <Sparkles size={18} className="text-accent fill-accent" />
-              <span className="text-[9px] font-bold uppercase tracking-tight">Smart</span>
+              <Users size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
             </TabsTrigger>
             <TabsTrigger 
               value="profile" 
