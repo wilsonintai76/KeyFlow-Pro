@@ -1,0 +1,208 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user within the KeyFlow Pro application, focusing on profile details relevant for key assignments and administrative tasks. This entity is distinct from an external authentication system's user data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity. This typically links to the ID provided by an external authentication system."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address of the user.",
+          "format": "email"
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "An optional employee ID or staff number for the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system (e.g., 'Administrator', 'Staff')."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role"
+      ]
+    },
+    "Key": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Key",
+      "type": "object",
+      "description": "Represents a physical key managed by the KeyFlow Pro system, including its current status and identifying information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Key entity."
+        },
+        "keyIdentifier": {
+          "type": "string",
+          "description": "A human-readable identifier or tag for the physical key (e.g., 'MAIN-001', 'RM101-A')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what the key opens or is used for (e.g., 'Main Entrance Key', 'Server Room Access')."
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical location where the key is stored when it is available (e.g., 'Key Cabinet A, Slot 1')."
+        },
+        "currentStatus": {
+          "type": "string",
+          "description": "The current status of the key (e.g., 'Available', 'Checked Out', 'Overdue', 'Lost', 'Maintenance')."
+        },
+        "lastAssignedToUserId": {
+          "type": "string",
+          "description": "Reference to the ID of the last UserProfile who was assigned this key. (Relationship: UserProfile 1:N Key)"
+        },
+        "lastAssignmentId": {
+          "type": "string",
+          "description": "Reference to the ID of the most recent active or completed Assignment involving this key. (Relationship: Assignment 1:N Key)"
+        }
+      },
+      "required": [
+        "id",
+        "keyIdentifier",
+        "description",
+        "location",
+        "currentStatus"
+      ]
+    },
+    "Assignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Assignment",
+      "type": "object",
+      "description": "Records a single instance of a key being checked out to a user, tracking its lifecycle from checkout to return.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Assignment entity."
+        },
+        "keyId": {
+          "type": "string",
+          "description": "Reference to the Key that was assigned. (Relationship: Key 1:N Assignment)"
+        },
+        "assignedToUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who checked out the key. (Relationship: UserProfile 1:N Assignment)"
+        },
+        "checkoutDateTime": {
+          "type": "string",
+          "description": "The date and time when the key was checked out.",
+          "format": "date-time"
+        },
+        "expectedReturnDateTime": {
+          "type": "string",
+          "description": "The date and time when the key was expected to be returned. Used for overdue tracking.",
+          "format": "date-time"
+        },
+        "returnDateTime": {
+          "type": "string",
+          "description": "The actual date and time when the key was returned.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of this specific assignment record (e.g., 'Active', 'Returned', 'Overdue', 'Cancelled')."
+        }
+      },
+      "required": [
+        "id",
+        "keyId",
+        "assignedToUserId",
+        "checkoutDateTime",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/user_profiles/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual user profile data. Each user can read and modify their own profile. Administrators can view and modify all profiles, including assigning roles. The 'role' field within this document serves for UI display and general categorization; the authoritative check for 'Administrator' access for security rules relies on the existence of a document in the '/system_roles/administrators/{userId}' collection for Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, typically matching `request.auth.uid`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/system_roles/administrators/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Dedicated collection for identifying administrators in KeyFlow Pro. The existence of a document with `userId` as its ID signifies that the corresponding UserProfile is an administrator. This collection is crucial for Authorization Independence, enabling DBAC without requiring `get()` operations on the UserProfile collection in security rules. Only existing administrators can add or remove other administrators. The document content can be minimal or empty, as its existence is the key authorization factor.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who is an administrator, matching `request.auth.uid`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/keys/{keyId}",
+        "definition": {
+          "entityName": "Key",
+          "schema": {
+            "$ref": "#/backend/entities/Key"
+          },
+          "description": "Main collection for managing the inventory of physical keys. All authenticated users (staff and administrators) can read key information, enabling the 'Real-time Availability Dashboard'. Only administrators have full write access (create, update, delete) for 'Key Inventory Management'. The `currentStatus` field acts as a Finite State Machine.",
+          "params": [
+            {
+              "name": "keyId",
+              "description": "The unique identifier for a specific physical key."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/assignments/{assignmentId}",
+        "definition": {
+          "entityName": "Assignment",
+          "schema": {
+            "$ref": "#/backend/entities/Assignment"
+          },
+          "description": "Records individual instances of keys being checked out and returned. All authenticated users can create new assignments (checkout a key). Users can read and update assignments where their `userId` matches the `assignedToUserId`. Administrators have full read/write access to all assignments for comprehensive 'Assignment History Log' management. The `status` field acts as a Finite State Machine.",
+          "params": [
+            {
+              "name": "assignmentId",
+              "description": "The unique identifier for a specific key assignment transaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The KeyFlow Pro Firestore structure is designed with a strong emphasis on Authorization Independence, Structural Segregation, and clear Access Modeling to ensure robust security and debuggability. Each collection's security posture is homogeneous, simplifying rule logic and minimizing the risk of authorization bypasses. Authorization decisions are primarily made by evaluating `request.auth.uid` against document fields or by checking the existence of a document in a dedicated global roles collection, completely eliminating the need for `get()` calls in security rules.\n\n**Authorization Independence via Denormalization:**\nAuthorization for administrators is achieved by checking for the existence of a document in the `/system_roles/administrators/{userId}` collection. This denormalized approach means that to determine if a user is an administrator, security rules only need to check `exists(/databases/$(database)/documents/system_roles/administrators/$(request.auth.uid))`. This avoids costly and transaction-breaking `get()` calls to a user's `UserProfile` document to read their 'role' field. This also allows atomic creation/updates without worrying about parent document read permissions.\n\n**QAP Compliance (Rules are not Filters):**\n1.  **`/user_profiles/{userId}`:** Allows administrators to list all user profiles for management purposes. Individual users can only read/write their own profile. This ensures a predictable query pattern: 'all profiles for admin', 'my profile for user'.\n2.  **`/system_roles/administrators/{userId}`:** Allows administrators to manage other administrators. Read access for all authenticated users to determine admin status, enabling client-side UI adjustments based on roles without needing to fetch a specific `UserProfile` document first.\n3.  **`/keys/{keyId}`:** This collection supports the 'Real-time Availability Dashboard' by allowing all authenticated users to list (read) all keys. This is a QAP-compliant `list` operation for all authenticated users. Write operations are restricted to administrators only, enforcing clear inventory management.\n4.  **`/assignments/{assignmentId}`:** This collection enables a QAP-compliant `list` for two primary use cases:\n    *   Users can list their *own* assignments by querying `where('assignedToUserId', '==', request.auth.uid)`, which is a filter on an indexed field, fully supported by Firestore security rules.\n    *   Administrators can list all assignments to review the 'Assignment History Log'.\nThis segregation of access patterns ensures that security rules do not act as filters, but rather enforce whether a query *can* be made or not, leading to clear and debuggable rule sets."
+  }
+}
