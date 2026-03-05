@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -42,13 +41,14 @@ export default function Home() {
   const profileDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'user_profiles', user.uid);
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
   
   const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
 
   // Initialize profile as guest if it doesn't exist
   useEffect(() => {
-    if (user && !isProfileLoading && !profile && firestore) {
+    // Only proceed if loading is finished and profile is explicitly missing
+    if (user && !isProfileLoading && profile === null && firestore) {
       const newProfile = {
         id: user.uid,
         firstName: user.displayName?.split(' ')[0] || 'User',
@@ -57,7 +57,9 @@ export default function Home() {
         role: 'guest',
         createdAt: new Date().toISOString()
       };
-      setDocumentNonBlocking(doc(firestore, 'user_profiles', user.uid), newProfile, { merge: true });
+      
+      const userRef = doc(firestore, 'user_profiles', user.uid);
+      setDocumentNonBlocking(userRef, newProfile, { merge: true });
     }
   }, [user, isProfileLoading, profile, firestore]);
 
@@ -68,12 +70,12 @@ export default function Home() {
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const assignmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
   const { data: assignmentsData, isLoading: isAssignmentsLoading } = useCollection<any>(assignmentsQuery);
