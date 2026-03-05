@@ -34,7 +34,8 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user within the system (e.g., 'Administrator', 'Staff')."
+          "description": "The role of the user within the system.",
+          "enum": ["guest", "staff", "admin"]
         }
       },
       "required": [
@@ -111,7 +112,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores individual user profile data."
+          "description": "Stores individual user profile data including roles."
         }
       },
       {
@@ -132,19 +133,6 @@
             "$ref": "#/backend/entities/Key"
           },
           "description": "Main collection for managing the inventory of physical keys."
-        }
-      },
-      {
-        "path": "/administrators/{userId}",
-        "definition": {
-          "entityName": "AdminRecord",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "uid": { "type": "string" }
-            }
-          },
-          "description": "Lookup collection for system administrators."
         }
       }
     ]

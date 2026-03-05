@@ -17,8 +17,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data;
+    }
+
+    function getRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/user_profiles/$(request.auth.uid)) 
+        ? getUserData().role 
+        : 'guest';
+    }
+
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/administrators/$(request.auth.uid));
+      return getRole() == 'admin';
+    }
+
+    function isStaff() {
+      return getRole() == 'staff' || isAdmin();
     }
 
     // --- Collection Rules ---
@@ -27,18 +41,11 @@ service cloud.firestore {
      * @description User Profile management.
      */
     match /user_profiles/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isOwner(userId) || isAdmin()) && (resource == null || request.resource.data.id == resource.data.id);
-      allow delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Administrator registry. Managed manually in Firebase Console.
-     */
-    match /administrators/{userId} {
       allow get: if isSignedIn();
-      allow write: if false; 
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.role == 'guest';
+      allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
     }
 
     /**
@@ -54,17 +61,17 @@ service cloud.firestore {
      */
     match /assignments/{assignmentId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.assignedToUserId == request.auth.uid;
-      allow update: if (isAdmin() || (isSignedIn() && resource.data.assignedToUserId == request.auth.uid)) && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Hardware triggers collection.
+     * @description Hardware triggers collection. Only staff and admins can trigger.
      */
     match /hardware_triggers/{triggerId} {
-      allow create: if isSignedIn();
-      allow get, list, update, delete: if isSignedIn();
+      allow create: if isStaff();
+      allow get, list, update, delete: if isStaff();
     }
   }
 }

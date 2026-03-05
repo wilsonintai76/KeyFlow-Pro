@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Sparkles, Loader2, LogIn, Unlock, User as UserIcon } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { LayoutDashboard, Key as KeyIcon, History, Sparkles, Loader2, LogIn, Unlock, User as UserIcon, ShieldAlert } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { KeyCard } from '@/components/inventory/KeyCard';
@@ -22,12 +22,14 @@ import {
   useMemoFirebase,
   useAuth,
   initiateGoogleSignIn,
-  addDocumentNonBlocking
+  addDocumentNonBlocking,
+  setDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { INITIAL_ASSIGNEES } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -36,13 +38,32 @@ export default function Home() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  // Check if user is an admin
-  const adminDocRef = useMemoFirebase(() => {
+  // Fetch user profile to check role
+  const profileDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return doc(firestore, 'administrators', user.uid);
+    return doc(firestore, 'user_profiles', user.uid);
   }, [firestore, user]);
-  const { data: adminData, isLoading: isAdminLoading } = useDoc<any>(adminDocRef);
-  const isAdminUser = !!adminData;
+  
+  const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
+
+  // Initialize profile as guest if it doesn't exist
+  useEffect(() => {
+    if (user && !isProfileLoading && !profile && firestore) {
+      const newProfile = {
+        id: user.uid,
+        firstName: user.displayName?.split(' ')[0] || 'User',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        email: user.email || '',
+        role: 'guest',
+        createdAt: new Date().toISOString()
+      };
+      setDocumentNonBlocking(doc(firestore, 'user_profiles', user.uid), newProfile, { merge: true });
+    }
+  }, [user, isProfileLoading, profile, firestore]);
+
+  const userRole = profile?.role || 'guest';
+  const isAdminUser = userRole === 'admin';
+  const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -104,7 +125,7 @@ export default function Home() {
     });
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="animate-spin text-primary" size={40} />
@@ -151,18 +172,22 @@ export default function Home() {
           <KeyStats stats={stats} />
           
           <div className="px-6 mb-6">
-            <Card className="border-none shadow-lg bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden">
+            <Card className={`border-none shadow-lg bg-gradient-to-br overflow-hidden ${isStaffOrAdmin ? 'from-primary to-primary/80 text-white' : 'from-slate-200 to-slate-300 text-slate-500'}`}>
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
-                  <h3 className="font-bold text-lg">Cabinet Control</h3>
-                  <p className="text-xs text-white/80">Trigger solenoid to unlock</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg">Cabinet Control</h3>
+                    {userRole === 'guest' && <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-400">RESTRICTED</Badge>}
+                  </div>
+                  <p className="text-xs opacity-80">{isStaffOrAdmin ? 'Trigger solenoid to unlock' : 'Staff access required to unlock'}</p>
                 </div>
                 <Button 
                   onClick={handleUnlockCabinet} 
-                  className="bg-accent hover:bg-accent/90 text-primary font-black rounded-full shadow-xl animate-pulse"
+                  disabled={!isStaffOrAdmin}
+                  className={`${isStaffOrAdmin ? 'bg-accent hover:bg-accent/90 text-primary animate-pulse' : 'bg-slate-400 text-slate-100'} font-black rounded-full shadow-xl transition-all`}
                   size="icon"
                 >
-                  <Unlock size={24} />
+                  {isStaffOrAdmin ? <Unlock size={24} /> : <ShieldAlert size={24} />}
                 </Button>
               </CardContent>
             </Card>
@@ -211,8 +236,11 @@ export default function Home() {
         <TabsContent value="profile" className="mt-0 p-6">
            <div className="space-y-6">
               <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-3xl shadow-sm border">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary border-4 border-white shadow-lg">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary border-4 border-white shadow-lg relative">
                   <UserIcon size={40} />
+                  <Badge className="absolute -bottom-2 bg-accent text-primary font-bold border-2 border-white">
+                    {userRole.toUpperCase()}
+                  </Badge>
                 </div>
                 <div className="text-center">
                   <h3 className="text-xl font-bold text-primary">{user.displayName || 'Staff Member'}</h3>
