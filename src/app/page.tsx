@@ -200,7 +200,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen max-w-md mx-auto bg-slate-50 pb-24 shadow-2xl relative border-x">
-      <MobileHeader />
+      <MobileHeader onProfileClick={() => setActiveTab('profile')} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsContent value="dashboard" className="mt-0">
@@ -316,7 +316,7 @@ export default function Home() {
         </TabsContent>
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
-          <TabsList className="grid w-full grid-cols-5 bg-transparent gap-1">
+          <TabsList className="grid w-full grid-cols-4 bg-transparent gap-1">
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
@@ -344,13 +344,6 @@ export default function Home() {
             >
               <Users size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="profile" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
-              <UserIcon size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-tight">Profile</span>
             </TabsTrigger>
           </TabsList>
         </div>

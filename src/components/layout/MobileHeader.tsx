@@ -4,7 +4,11 @@ import { Key } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export function MobileHeader() {
+interface MobileHeaderProps {
+  onProfileClick: () => void;
+}
+
+export function MobileHeader({ onProfileClick }: MobileHeaderProps) {
   const { user } = useUser();
 
   const getInitials = (name: string | null) => {
@@ -23,12 +27,18 @@ export function MobileHeader() {
         <span className="tracking-tight">KeyFlow <span className="text-accent">Pro</span></span>
       </div>
       
-      <Avatar className="w-8 h-8 border shadow-sm">
-        {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
-        <AvatarFallback className="bg-secondary text-[10px] font-bold text-primary">
-          {getInitials(user?.displayName || null)}
-        </AvatarFallback>
-      </Avatar>
+      <button 
+        onClick={onProfileClick}
+        className="rounded-full hover:ring-2 hover:ring-accent/50 transition-all focus:outline-none"
+        aria-label="View Profile"
+      >
+        <Avatar className="w-8 h-8 border shadow-sm">
+          {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+          <AvatarFallback className="bg-secondary text-[10px] font-bold text-primary">
+            {getInitials(user?.displayName || null)}
+          </AvatarFallback>
+        </Avatar>
+      </button>
     </header>
   );
 }
