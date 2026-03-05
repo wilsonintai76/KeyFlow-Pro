@@ -27,8 +27,12 @@ service cloud.firestore {
         : 'guest';
     }
 
+    /**
+     * @description Checks if the user is an administrator.
+     * Explicitly trusts Wilson Intai's UID to ensure bootstrap access.
+     */
     function isAdmin() {
-      return getRole() == 'admin';
+      return getRole() == 'admin' || request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
     }
 
     function isStaff() {
