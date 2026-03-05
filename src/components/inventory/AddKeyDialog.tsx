@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -20,34 +21,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Key } from '@/lib/types';
 import { Plus } from 'lucide-react';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
-interface AddKeyDialogProps {
-  onAddKey: (key: Key) => void;
-}
-
-export function AddKeyDialog({ onAddKey }: AddKeyDialogProps) {
+export function AddKeyDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState('Building');
   const [location, setLocation] = useState('');
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !location) return;
+    if (!name || !location || !firestore) return;
 
-    const newKey: Key = {
-      id: `K${Math.floor(100 + Math.random() * 900)}`,
-      name,
-      type,
-      location,
-      status: 'available',
-    };
+    const keysCollection = collection(firestore, 'keys');
+    
+    addDocumentNonBlocking(keysCollection, {
+      keyIdentifier: name,
+      description: type,
+      location: location,
+      currentStatus: 'available',
+      createdAt: new Date().toISOString()
+    });
 
-    onAddKey(newKey);
+    toast({
+      title: "Success",
+      description: `${name} has been added to the inventory.`,
+    });
+
     setOpen(false);
-    // Reset form fields
     setName('');
     setType('Building');
     setLocation('');
