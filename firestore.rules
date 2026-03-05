@@ -52,7 +52,7 @@ service cloud.firestore {
      * Manual updates are disabled as per policy.
      */
     match /keys/{keyId} {
-      allow get, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow create: if isAdmin();
       allow update: if false; 
       allow delete: if isAdmin() && resource.data.currentStatus == 'available';

@@ -13,11 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface KeyCardProps {
   keyData: Key;
-  onClick?: () => void;
   isAdmin?: boolean;
 }
 
-export function KeyCard({ keyData, onClick, isAdmin }: KeyCardProps) {
+export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -44,8 +43,7 @@ export function KeyCard({ keyData, onClick, isAdmin }: KeyCardProps) {
 
   return (
     <Card 
-      className="p-4 mb-3 border-none shadow-sm active:scale-[0.98] transition-transform cursor-pointer group relative overflow-hidden"
-      onClick={onClick}
+      className="p-4 mb-3 border-none shadow-sm transition-transform group relative overflow-hidden bg-white"
     >
       <div className="flex justify-between items-start mb-2">
         <div className="flex flex-col gap-0.5">
