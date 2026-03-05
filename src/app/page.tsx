@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -48,12 +49,16 @@ export default function Home() {
   // Initialize profile as guest if it doesn't exist
   useEffect(() => {
     if (user && !isProfileLoading && profile === null && firestore) {
+      // Wilson Intai (Admin) check
+      const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
+      const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
+      
       const newProfile = {
         id: user.uid,
         firstName: user.displayName?.split(' ')[0] || 'User',
         lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
         email: user.email || '',
-        role: 'guest',
+        role: (isAdminByUID || isAdminByEmail) ? 'admin' : 'guest',
         createdAt: new Date().toISOString()
       };
       
@@ -72,9 +77,9 @@ export default function Home() {
   }, [firestore, user?.uid]);
 
   const assignmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !isStaffOrAdmin) return null;
     return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isStaffOrAdmin]);
 
   const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
   const { data: assignmentsData, isLoading: isAssignmentsLoading } = useCollection<any>(assignmentsQuery);
@@ -227,7 +232,17 @@ export default function Home() {
           <div className="px-6 pt-6 flex justify-between items-center">
             <h2 className="text-xl font-bold text-primary">Activity Logs</h2>
           </div>
-          <TransactionHistory transactions={transactions} keys={keys} assignees={INITIAL_ASSIGNEES} />
+          {isAssignmentsLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
+          ) : !isStaffOrAdmin ? (
+            <div className="p-10 text-center space-y-4">
+              <ShieldAlert className="mx-auto text-rose-500" size={48} />
+              <h3 className="font-bold text-lg">Staff Access Required</h3>
+              <p className="text-sm text-muted-foreground">Log history is restricted to staff members.</p>
+            </div>
+          ) : (
+            <TransactionHistory transactions={transactions} keys={keys} assignees={INITIAL_ASSIGNEES} />
+          )}
         </TabsContent>
 
         <TabsContent value="users" className="mt-0">

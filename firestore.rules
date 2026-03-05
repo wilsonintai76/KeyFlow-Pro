@@ -43,7 +43,8 @@ service cloud.firestore {
     match /user_profiles/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.role == 'guest';
+      // Allow Wilson to be admin on creation, others default to guest
+      allow create: if isOwner(userId) && (request.resource.data.role == 'guest' || userId == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2');
       allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isAdmin();
     }
@@ -60,7 +61,7 @@ service cloud.firestore {
      * @description Key assignments (Checkout/Return). 
      */
     match /assignments/{assignmentId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if isStaff();
       allow create: if isStaff();
       allow update: if isStaff();
       allow delete: if isAdmin();
