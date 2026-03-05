@@ -41,20 +41,19 @@ service cloud.firestore {
     match /user_profiles/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      // Allow Wilson to be admin on creation, others default to guest
       allow create: if isOwner(userId) && (request.resource.data.role == 'guest' || userId == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' || request.auth.token.email == 'wilsonintai76@gmail.com');
       allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isAdmin();
     }
 
     /**
-     * @description Key inventory. Only admins can create. Delete allowed only if status is available.
-     * Manual updates are disabled as per policy.
+     * @description Key inventory. Admins can create and update (for maintenance).
+     * Deletion allowed only if status is available.
      */
     match /keys/{keyId} {
       allow read: if isSignedIn();
       allow create: if isAdmin();
-      allow update: if false; 
+      allow update: if isAdmin(); 
       allow delete: if isAdmin() && resource.data.currentStatus == 'available';
     }
 

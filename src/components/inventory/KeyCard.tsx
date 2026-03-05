@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useFirestore, deleteDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { EditKeyDialog } from "./EditKeyDialog";
 
 interface KeyCardProps {
   keyData: Key;
@@ -50,16 +51,21 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
           <h3 className="font-semibold text-base text-foreground leading-tight">{keyData.name}</h3>
           <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">{keyData.id}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {isAdmin && keyData.status === 'available' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
-              onClick={handleDelete}
-            >
-              <Trash2 size={16} />
-            </Button>
+        <div className="flex items-center gap-1">
+          {isAdmin && (
+            <>
+              <EditKeyDialog keyData={keyData} />
+              {keyData.status === 'available' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all duration-200"
+                  onClick={handleDelete}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              )}
+            </>
           )}
           <Badge variant={config.variant} className="text-[10px] uppercase font-bold px-2 py-0">
             {config.label}
