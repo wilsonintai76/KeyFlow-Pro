@@ -100,6 +100,7 @@ export default function Home() {
 
   const userRole = profile?.role || 'guest';
   const isAdminUser = userRole === 'admin';
+  const isStaffOnly = userRole === 'staff';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
   const keysQuery = useMemoFirebase(() => {
@@ -147,7 +148,7 @@ export default function Home() {
   }, [keys]);
 
   const handleUnlockCabinet = () => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || !isStaffOrAdmin) return;
     
     addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
       action: 'UNLOCK_CABINET',
@@ -330,7 +331,7 @@ export default function Home() {
         </TabsContent>
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
-          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : 'grid-cols-4'} bg-transparent gap-1`}>
+          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : (isStaffOrAdmin ? 'grid-cols-3' : 'grid-cols-2')} bg-transparent gap-1`}>
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
@@ -345,13 +346,15 @@ export default function Home() {
               <KeyIcon size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Keys</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="history" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
-              <History size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-tight">Logs</span>
-            </TabsTrigger>
+            {isStaffOrAdmin && (
+              <TabsTrigger 
+                value="history" 
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <History size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Logs</span>
+              </TabsTrigger>
+            )}
             {isAdminUser && (
               <TabsTrigger 
                 value="users" 
@@ -368,15 +371,6 @@ export default function Home() {
               >
                 <SettingsIcon size={18} />
                 <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
-              </TabsTrigger>
-            )}
-            {!isAdminUser && (
-              <TabsTrigger 
-                value="profile" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                <UserIcon size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">Me</span>
               </TabsTrigger>
             )}
           </TabsList>
