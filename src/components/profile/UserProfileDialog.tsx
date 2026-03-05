@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Phone, Save, Loader2 } from 'lucide-react';
-import { useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,8 +21,12 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Get user profile data
-  const userDocRef = doc(firestore, 'user_profiles', userId);
+  // Memoize the document reference to satisfy hook requirements
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !userId) return null;
+    return doc(firestore, 'user_profiles', userId);
+  }, [firestore, userId]);
+
   const { data: profile, isLoading } = useDoc<any>(userDocRef);
 
   useEffect(() => {
@@ -32,7 +36,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   }, [profile]);
 
   const handleSave = () => {
-    if (!firestore || !userId) return;
+    if (!firestore || !userId || !userDocRef) return;
     setIsSaving(true);
 
     setDocumentNonBlocking(userDocRef, {
