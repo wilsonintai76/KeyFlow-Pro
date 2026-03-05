@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -36,14 +35,14 @@ export default function Home() {
   const { toast } = useToast();
 
   const keysQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const assignmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
   const { data: assignmentsData, isLoading: isAssignmentsLoading } = useCollection<any>(assignmentsQuery);
