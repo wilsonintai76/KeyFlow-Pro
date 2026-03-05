@@ -29,14 +29,16 @@ service cloud.firestore {
 
     /**
      * @description Checks if the user is an administrator.
-     * Explicitly trusts Wilson Intai's UID to ensure bootstrap access.
+     * Explicitly trusts Wilson Intai's UID and Email to ensure bootstrap access.
      */
     function isAdmin() {
-      return getRole() == 'admin' || request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
+      return request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' 
+        || request.auth.token.email == 'wilsonintai76@gmail.com'
+        || getRole() == 'admin';
     }
 
     function isStaff() {
-      return getRole() == 'staff' || isAdmin();
+      return isAdmin() || getRole() == 'staff';
     }
 
     // --- Collection Rules ---
@@ -48,7 +50,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isAdmin();
       // Allow Wilson to be admin on creation, others default to guest
-      allow create: if isOwner(userId) && (request.resource.data.role == 'guest' || userId == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2');
+      allow create: if isOwner(userId) && (request.resource.data.role == 'guest' || userId == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' || request.auth.token.email == 'wilsonintai76@gmail.com');
       allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isAdmin();
     }
