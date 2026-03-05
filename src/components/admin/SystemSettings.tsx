@@ -8,13 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Settings, Clock, Save, Loader2, Info } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Settings, Clock, Save, Loader2, Info, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function SystemSettings() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [duration, setDuration] = useState('24');
+  const [categoriesText, setCategoriesText] = useState('Workshop, Room, Machine');
   const [isSaving, setIsSaving] = useState(false);
 
   const settingsDocRef = useMemoFirebase(() => {
@@ -25,8 +27,13 @@ export function SystemSettings() {
   const { data: settings, isLoading } = useDoc<any>(settingsDocRef);
 
   useEffect(() => {
-    if (settings?.maxBorrowDurationHours) {
-      setDuration(settings.maxBorrowDurationHours.toString());
+    if (settings) {
+      if (settings.maxBorrowDurationHours) {
+        setDuration(settings.maxBorrowDurationHours.toString());
+      }
+      if (settings.categories && Array.isArray(settings.categories)) {
+        setCategoriesText(settings.categories.join(', '));
+      }
     }
   }, [settings]);
 
@@ -45,8 +52,15 @@ export function SystemSettings() {
       return;
     }
 
+    // Process categories: split by comma, trim, and remove empty strings
+    const categoriesArray = categoriesText
+      .split(',')
+      .map(cat => cat.trim())
+      .filter(cat => cat.length > 0);
+
     setDocumentNonBlocking(settingsDocRef, {
       maxBorrowDurationHours: numericDuration,
+      categories: categoriesArray,
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
@@ -55,7 +69,7 @@ export function SystemSettings() {
       setIsSaving(false);
       toast({
         title: "Settings Saved",
-        description: `Key borrow duration set to ${numericDuration} hours.`,
+        description: "System policies and categories have been updated.",
       });
     }, 600);
   };
@@ -76,9 +90,9 @@ export function SystemSettings() {
             <Clock size={18} className="text-accent" />
             <CardTitle className="text-base font-bold">Borrow Policies</CardTitle>
           </div>
-          <CardDescription className="text-xs">Configure how long keys can be held before flagged as overdue.</CardDescription>
+          <CardDescription className="text-xs">Configure overdue thresholds.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-6 space-y-4">
           <div className="space-y-3">
             <Label htmlFor="duration" className="text-sm font-bold">Max Borrow Duration (Hours)</Label>
             <div className="flex items-center gap-3">
@@ -92,10 +106,32 @@ export function SystemSettings() {
               />
               <span className="text-sm font-medium text-muted-foreground">Hours</span>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
+        <CardHeader className="bg-slate-50 border-b pb-4">
+          <div className="flex items-center gap-2 text-primary">
+            <Tag size={18} className="text-accent" />
+            <CardTitle className="text-base font-bold">Category Management</CardTitle>
+          </div>
+          <CardDescription className="text-xs">Define available key categories.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-3">
+            <Label htmlFor="categories" className="text-sm font-bold">Key Categories</Label>
+            <Textarea 
+              id="categories" 
+              value={categoriesText}
+              onChange={(e) => setCategoriesText(e.target.value)}
+              placeholder="e.g. Workshop, Room, Machine"
+              className="bg-slate-50 border-slate-100 min-h-[100px] focus-visible:ring-accent"
+            />
             <div className="p-3 bg-blue-50/50 rounded-2xl flex items-start gap-3 border border-blue-100">
               <Info size={16} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[11px] text-blue-700 leading-relaxed">
-                This value determines the "Overdue" status on the dashboard. Any key checked out longer than this threshold will be flagged for follow-up.
+                Enter categories separated by commas. These will appear in the "Category" dropdown when adding new keys.
               </p>
             </div>
           </div>
@@ -110,16 +146,15 @@ export function SystemSettings() {
             ) : (
               <>
                 <Save size={18} />
-                Update Policy
+                Update System Settings
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      <div className="p-6 border border-dashed rounded-3xl text-center space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Additional Modules</p>
-        <p className="text-xs text-muted-foreground">Hardware synchronization and API integration settings are currently managed by technical staff.</p>
+      <div className="p-6 border border-dashed rounded-3xl text-center">
+        <p className="text-xs text-muted-foreground italic">Hardware synchronization and API integration settings are currently managed by technical staff.</p>
       </div>
     </div>
   );

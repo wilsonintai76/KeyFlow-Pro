@@ -74,7 +74,8 @@
           "description": "A human-readable identifier (e.g., 'MAIN-001')."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "The category or type of the key (e.g., 'Workshop', 'Room')."
         },
         "location": {
           "type": "string"
@@ -105,6 +106,11 @@
           "type": "integer",
           "description": "Maximum hours a key can be borrowed before considered overdue.",
           "default": 24
+        },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Available categories for keys (e.g., ['Workshop', 'Room', 'Machine'])"
         }
       }
     }

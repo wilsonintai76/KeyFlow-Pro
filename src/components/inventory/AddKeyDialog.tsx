@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,18 +21,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { Plus, Loader2 } from 'lucide-react';
+import { useFirestore, useDoc, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export function AddKeyDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [type, setType] = useState('Building');
+  const [type, setType] = useState('Room');
   const [location, setLocation] = useState('');
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  // Fetch dynamic categories from settings
+  const settingsDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'global');
+  }, [firestore]);
+
+  const { data: settings, isLoading: isSettingsLoading } = useDoc<any>(settingsDocRef);
+
+  const categories = settings?.categories && Array.isArray(settings.categories) 
+    ? settings.categories 
+    : ['Workshop', 'Room', 'Machine'];
+
+  // Ensure default type is valid when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !categories.includes(type)) {
+      setType(categories[0]);
+    }
+  }, [categories]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +74,6 @@ export function AddKeyDialog() {
 
     setOpen(false);
     setName('');
-    setType('Building');
     setLocation('');
   };
 
@@ -66,53 +84,55 @@ export function AddKeyDialog() {
           <Plus size={20} />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] rounded-3xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New Key</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary">Add New Key</DialogTitle>
             <DialogDescription>
-              Enter the details for the new physical key to add it to the inventory.
+              Enter the details for the physical key to register it in the inventory.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-5 py-6">
             <div className="grid gap-2">
-              <Label htmlFor="name">Key Name</Label>
+              <Label htmlFor="name" className="font-bold text-sm">Key Identifier</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Master Lab Key"
+                placeholder="e.g. M7M / LAB-01"
+                className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="type">Category</Label>
+              <Label htmlFor="type" className="font-bold text-sm">Category</Label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Building">Building</SelectItem>
-                  <SelectItem value="Office">Office</SelectItem>
-                  <SelectItem value="Vehicle">Vehicle</SelectItem>
-                  <SelectItem value="High Security">High Security</SelectItem>
-                  <SelectItem value="Industrial">Industrial</SelectItem>
+                <SelectContent className="rounded-xl border-slate-100">
+                  {categories.map((cat: string) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="location">Storage Location</Label>
+              <Label htmlFor="location" className="font-bold text-sm">Storage Location</Label>
               <Input
                 id="location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Security Desk Drawer 2"
+                placeholder="e.g. Hitech Cabinet / Drawer 2"
+                className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
                 required
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" className="w-full">Create Key</Button>
+            <Button type="submit" className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10">
+              Register Key
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
