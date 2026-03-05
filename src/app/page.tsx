@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { KeyCard } from '@/components/inventory/KeyCard';
@@ -37,6 +36,36 @@ export default function Home() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+
+  // Inactivity Timer (10 Minutes)
+  useEffect(() => {
+    if (!user || !auth) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        auth.signOut();
+        toast({
+          title: "Session Expired",
+          description: "You have been signed out due to inactivity.",
+        });
+      }, 10 * 60 * 1000); // 10 minutes
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    const handleActivity = () => resetTimer();
+
+    events.forEach(event => document.addEventListener(event, handleActivity));
+
+    resetTimer(); // Initialize timer
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, handleActivity));
+    };
+  }, [user, auth, toast]);
 
   // Fetch user profile to check role
   const profileDocRef = useMemoFirebase(() => {
@@ -274,11 +303,15 @@ export default function Home() {
               <UserProfileDialog userId={user.uid} />
               <Button 
                 variant="outline" 
-                className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl"
+                className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl flex items-center justify-center gap-2"
                 onClick={() => auth.signOut()}
               >
+                <LogOut size={18} />
                 Sign Out
               </Button>
+              <div className="text-center pt-4">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Automatic sign-out enabled for security</p>
+              </div>
            </div>
         </TabsContent>
 
