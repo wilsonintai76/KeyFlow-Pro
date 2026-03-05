@@ -1,3 +1,4 @@
+
 export type KeyStatus = 'available' | 'checked_out' | 'overdue';
 
 export interface Key {
@@ -15,6 +16,7 @@ export interface Assignee {
   name: string;
   department: string;
   email: string;
+  phoneNumber?: string;
 }
 
 export interface Transaction {
