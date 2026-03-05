@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Sparkles, Plus } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Sparkles } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { KeyCard } from '@/components/inventory/KeyCard';
 import { SmartAssigner } from '@/components/ai/SmartAssigner';
 import { TransactionHistory } from '@/components/history/TransactionHistory';
+import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { INITIAL_ASSIGNEES, INITIAL_KEYS, INITIAL_TRANSACTIONS } from '@/lib/mock-data';
 import { Key, DashboardStats } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [keys] = useState<Key[]>(INITIAL_KEYS);
+  const [keys, setKeys] = useState<Key[]>(INITIAL_KEYS);
   const [assignees] = useState(INITIAL_ASSIGNEES);
   const [transactions] = useState(INITIAL_TRANSACTIONS);
+  const { toast } = useToast();
 
   const stats = useMemo((): DashboardStats => {
     return {
@@ -26,6 +29,14 @@ export default function Home() {
       overdue: keys.filter(k => k.status === 'overdue').length,
     };
   }, [keys]);
+
+  const handleAddKey = (newKey: Key) => {
+    setKeys(prev => [newKey, ...prev]);
+    toast({
+      title: "Success",
+      description: `${newKey.name} has been added to the inventory.`,
+    });
+  };
 
   return (
     <div className="flex flex-col min-h-screen max-w-md mx-auto bg-background pb-20">
@@ -47,9 +58,7 @@ export default function Home() {
         <TabsContent value="inventory" className="mt-0 p-6 space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-primary">Key Inventory</h2>
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-white rounded-full h-10 w-10 p-0 shadow-lg shadow-primary/20">
-              <Plus size={20} />
-            </Button>
+            <AddKeyDialog onAddKey={handleAddKey} />
           </div>
           <div className="space-y-1">
             {keys.map(key => (
@@ -103,6 +112,7 @@ export default function Home() {
           </TabsList>
         </div>
       </Tabs>
+      <Toaster />
     </div>
   );
 }
