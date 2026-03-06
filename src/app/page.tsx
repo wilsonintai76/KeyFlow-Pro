@@ -73,22 +73,25 @@ export default function Home() {
 
   useEffect(() => {
     async function checkAndInitialize() {
-      // Defensive onboarding logic: only initialize if user is signed in, 
-      // the document explicitly does not exist, and there's no loading/error state.
       if (!user || !firestore || isProfileLoading || profileError) return;
       
-      // We only want to run this if we are SURE the profile is missing.
-      // useDoc data being null while not loading is a strong indicator.
       if (profile === null) {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
-          const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
+          const email = user.email?.toLowerCase();
+          const isMasterAdmin = email === 'wilsonintai76@gmail.com';
+          const isTrustedStaff = email === 'wilson@poliku.edu.my';
+          
+          let role = 'guest';
+          if (isMasterAdmin) role = 'admin';
+          else if (isTrustedStaff) role = 'staff';
+
           const newProfile = {
             id: user.uid,
             firstName: user.displayName?.split(' ')[0] || 'User',
             lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
             email: user.email || '',
-            role: isMasterAdmin ? 'admin' : 'guest',
+            role: role,
             createdAt: new Date().toISOString()
           };
           setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });

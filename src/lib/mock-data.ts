@@ -12,6 +12,7 @@ export const INITIAL_KEYS: Key[] = [
 export const INITIAL_ASSIGNEES: Assignee[] = [
   { id: 'A001', name: 'John Doe', department: 'IT Operations', email: 'john.doe@company.com' },
   { id: 'A002', name: 'Sarah Miller', department: 'Workshop', email: 'sarah.m@company.com' },
+  { id: 'A003', name: 'Wilson Poliku', department: 'Faculty', email: 'wilson@poliku.edu.my' },
 ];
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [
