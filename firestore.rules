@@ -13,18 +13,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     /**
      * @description Checks if the user is an administrator.
-     * Prioritizes Master Admin ID and Email for immediate bootstrap access.
+     * Prioritizes Master Admin IDs and Emails for immediate bootstrap access.
      */
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' 
         || request.auth.token.email == 'wilsonintai76@gmail.com'
+        || request.auth.token.email == 'wilson@poliku.edu.my'
         || (exists(/databases/$(database)/documents/user_profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.role == 'admin')
       );
     }
@@ -37,11 +34,13 @@ service cloud.firestore {
 
     /**
      * @description User Profile management.
-     * Owners and Admins can manage profile data.
+     * Users can create/manage their own profiles. Admins can manage all.
      */
-    match /user_profiles/{userId} {
+    match /user_profiles/{uid} {
       allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
