@@ -38,8 +38,8 @@ service cloud.firestore {
      */
     match /user_profiles/{uid} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+      // Allow creation/updates if the user is the owner or an admin
+      allow create, update: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -63,7 +63,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Hardware triggers collection. Staff can trigger, ESP32 (signed in as hardware user or via wide rules) reads.
+     * @description Hardware triggers collection. Staff can trigger, ESP32 reads.
      */
     match /hardware_triggers/{triggerId} {
       allow read, create, update: if isStaff();
@@ -75,7 +75,7 @@ service cloud.firestore {
      */
     match /cabinet_status/{statusId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Hardware uses an auth account
+      allow write: if isSignedIn();
     }
 
     /**

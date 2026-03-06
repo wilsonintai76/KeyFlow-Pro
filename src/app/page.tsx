@@ -81,11 +81,14 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
 
-  // Initialize profile as guest if it doesn't exist
+  // Initialize profile as guest/admin if it doesn't exist
   useEffect(() => {
     if (user && !isProfileLoading && profile === null && firestore) {
+      // MASTER ADMIN WHITELIST
       const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
-      const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
+      const isAdminByEmail = 
+        user.email === 'wilsonintai76@gmail.com' || 
+        user.email === 'wilson@poliku.edu.my';
       
       const newProfile = {
         id: user.uid,
