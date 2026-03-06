@@ -37,14 +37,11 @@ service cloud.firestore {
 
     /**
      * @description User Profile management.
-     * Admins can manage all profiles. Owners can manage their own with restrictions.
+     * Owners and Admins can manage profile data.
      */
     match /user_profiles/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isAdmin() || (isOwner(userId) && (request.resource.data.role == 'admin' || request.resource.data.role == resource.data.role));
-      allow delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     /**
