@@ -19,6 +19,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
 
   useEffect(() => {
     // Set persistence to session so user logs out when closing the browser/app
+    // browserSessionPersistence clears auth state when the tab or window is closed.
     if (firebaseServices.auth) {
       setPersistence(firebaseServices.auth, browserSessionPersistence).catch((error) => {
         if (process.env.NODE_ENV !== 'production') {

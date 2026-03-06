@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -46,7 +47,7 @@ export default function Home() {
   useEffect(() => {
     if (!user || !auth) return;
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
 
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -82,7 +83,7 @@ export default function Home() {
 
   // Initialize profile as guest/admin ONLY if it explicitly does not exist
   useEffect(() => {
-    // Only attempt initialization if loading is finished, data is explicitly null (not found),
+    // Only attempt initialization if loading is completely finished, data is explicitly null (not found),
     // and there was no permission error on the read. This prevents race conditions.
     if (user && !isProfileLoading && profile === null && !profileError && firestore) {
       // The ONLY master admin is wilsonintai76@gmail.com
@@ -98,9 +99,10 @@ export default function Home() {
       };
       
       const userRef = doc(firestore, 'user_profiles', user.uid);
-      // We use setDocumentNonBlocking without merge:true for initialization to avoid conflicts
-      // The rules will block this if it turns out the document ALREADY exists with a non-guest role
-      setDocumentNonBlocking(userRef, newProfile, { merge: false });
+      // We use setDocumentNonBlocking with merge:true. 
+      // If the doc somehow exists with a higher role, the security rules will block this 'write' 
+      // as it would be changing the role field to 'guest'.
+      setDocumentNonBlocking(userRef, newProfile, { merge: true });
     }
   }, [user, isProfileLoading, profile, profileError, firestore]);
 
