@@ -34,12 +34,13 @@ service cloud.firestore {
 
     /**
      * @description User Profile management.
-     * Users can create/manage their own profiles. Admins can manage all.
+     * Users can create/manage their own profiles. Role changes restricted to admins.
      */
     match /user_profiles/{uid} {
       allow read: if isSignedIn();
-      // Allow creation/updates if the user is the owner or an admin
-      allow create, update: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      // Allow profile updates (phone, etc.) by owner, but only admins can change the role.
+      allow update: if (isSignedIn() && request.auth.uid == uid && request.resource.data.role == resource.data.role) || isAdmin();
       allow delete: if isAdmin();
     }
 

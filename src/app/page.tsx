@@ -179,16 +179,6 @@ export default function Home() {
     });
   };
 
-  const handleBecomeAdmin = () => {
-    if (!firestore || !user) return;
-    const userRef = doc(firestore, 'user_profiles', user.uid);
-    updateDocumentNonBlocking(userRef, { role: 'admin' });
-    toast({
-      title: "Role Updated",
-      description: "You are now an administrator.",
-    });
-  };
-
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -395,17 +385,6 @@ export default function Home() {
               
               <UserProfileDialog userId={user.uid} />
               
-              {userRole === 'guest' && (
-                <Button 
-                  variant="default" 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center gap-2 h-12 font-bold shadow-lg shadow-emerald-200"
-                  onClick={handleBecomeAdmin}
-                >
-                  <ShieldCheck size={18} />
-                  Claim Admin Role
-                </Button>
-              )}
-
               <ReportProblemDialog />
 
               <Button 
