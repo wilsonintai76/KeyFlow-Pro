@@ -41,9 +41,20 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  // Start loading as true if we have a reference to fetch
   const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  // Sync internal state with prop changes immediately to avoid race conditions
+  // when a consuming component checks !isLoading && !data
+  const [prevRefPath, setPrevRefPath] = useState<string | null>(null);
+  const currentPath = memoizedDocRef?.path || null;
+
+  if (currentPath !== prevRefPath) {
+    setPrevRefPath(currentPath);
+    setIsLoading(!!memoizedDocRef);
+    setData(null);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!memoizedDocRef) {

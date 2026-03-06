@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -84,8 +83,8 @@ export default function Home() {
   // Initialize profile as guest/admin ONLY if it explicitly does not exist
   useEffect(() => {
     // Only attempt initialization if loading is completely finished, data is explicitly null (not found),
-    // and there was no permission error on the read. This prevents race conditions.
-    if (user && !isProfileLoading && profile === null && !profileError && firestore) {
+    // and there was no error on the read. This prevents race conditions.
+    if (user && profileDocRef && !isProfileLoading && profile === null && !profileError && firestore) {
       // The ONLY master admin is wilsonintai76@gmail.com
       const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
       
@@ -104,7 +103,7 @@ export default function Home() {
       // as it would be changing the role field to 'guest'.
       setDocumentNonBlocking(userRef, newProfile, { merge: true });
     }
-  }, [user, isProfileLoading, profile, profileError, firestore]);
+  }, [user, isProfileLoading, profile, profileError, firestore, profileDocRef]);
 
   const userRole = profile?.role || 'guest';
   const isAdminUser = userRole === 'admin';

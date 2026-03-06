@@ -58,9 +58,22 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  // Start loading as true if we have a query to execute
   const [isLoading, setIsLoading] = useState<boolean>(!!memoizedTargetRefOrQuery);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  // Sync internal state with query changes immediately to avoid race conditions
+  const [prevQueryKey, setPrevQueryKey] = useState<string | null>(null);
+  const currentKey = memoizedTargetRefOrQuery ? 
+    (memoizedTargetRefOrQuery.type === 'collection' ? 
+      (memoizedTargetRefOrQuery as CollectionReference).path : 
+      (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()) : null;
+
+  if (currentKey !== prevQueryKey) {
+    setPrevQueryKey(currentKey);
+    setIsLoading(!!memoizedTargetRefOrQuery);
+    setData(null);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
