@@ -84,11 +84,9 @@ export default function Home() {
   // Initialize profile as guest/admin if it doesn't exist
   useEffect(() => {
     if (user && !isProfileLoading && profile === null && firestore) {
-      // MASTER ADMIN WHITELIST
+      // MASTER ADMIN WHITELIST - Only wilsonintai76 remains as bootstrap admin
       const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
-      const isAdminByEmail = 
-        user.email === 'wilsonintai76@gmail.com' || 
-        user.email === 'wilson@poliku.edu.my';
+      const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
       
       const newProfile = {
         id: user.uid,

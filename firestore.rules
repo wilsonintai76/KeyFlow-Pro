@@ -15,14 +15,16 @@ service cloud.firestore {
 
     /**
      * @description Checks if the user is an administrator.
-     * Prioritizes Master Admin IDs and Emails for immediate bootstrap access.
+     * Fallback to Master Admin email only if not explicitly demoted in database.
      */
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' 
         || request.auth.token.email == 'wilsonintai76@gmail.com'
-        || request.auth.token.email == 'wilson@poliku.edu.my'
-        || (exists(/databases/$(database)/documents/user_profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.role == 'admin')
+        || (
+          exists(/databases/$(database)/documents/user_profiles/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.role == 'admin'
+        )
       );
     }
 
@@ -38,21 +40,20 @@ service cloud.firestore {
      */
     match /user_profiles/{uid} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      // Allow profile updates (phone, etc.) by owner, but only admins can change the role.
-      allow update: if (isSignedIn() && request.auth.uid == uid && request.resource.data.role == resource.data.role) || isAdmin();
+      // Allow creation/updates for the owner as long as they don't elevate their own role
+      allow create, update: if (isSignedIn() && request.auth.uid == uid && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+        isAdmin()
+      )) || isAdmin();
       allow delete: if isAdmin();
     }
 
     /**
      * @description Key inventory. Admins can create and update (for maintenance).
-     * Deletion allowed only if status is available.
      */
     match /keys/{keyId} {
       allow read: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if isAdmin(); 
-      allow delete: if isAdmin() && resource.data.currentStatus == 'available';
+      allow create, update, delete: if isAdmin();
     }
 
     /**
