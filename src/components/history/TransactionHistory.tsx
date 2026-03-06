@@ -50,8 +50,7 @@ export function TransactionHistory({ transactions, keys, assignees }: HistoryPro
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between items-start">
-                    <p className="text-sm font-bold text-primary">{key?.name || t.keyId}</p>
-                    <span className="text-[10px] text-muted-foreground font-mono">{t.id}</span>
+                    <p className="text-sm font-bold text-primary">{key?.name || 'Unknown Key'}</p>
                   </div>
                   <p className="text-xs text-muted-foreground">User: <span className="text-foreground font-medium">{assignee?.name || t.assigneeId}</span></p>
                   <div className="flex justify-between items-end pt-1">

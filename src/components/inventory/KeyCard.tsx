@@ -1,10 +1,9 @@
-
 "use client";
 
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2, ShieldCheck, ShieldAlert, User, Phone } from "lucide-react";
+import { MapPin, Tag, Trash2, User, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useFirestore, deleteDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
@@ -78,7 +77,6 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               />
             )}
           </div>
-          <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider truncate">{keyData.id}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {isAdmin && (
