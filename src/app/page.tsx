@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning, ShieldCheck } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -27,7 +27,8 @@ import {
   useAuth,
   initiateGoogleSignIn,
   addDocumentNonBlocking,
-  setDocumentNonBlocking
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -175,6 +176,16 @@ export default function Home() {
     });
   };
 
+  const handleBecomeAdmin = () => {
+    if (!firestore || !user) return;
+    const userRef = doc(firestore, 'user_profiles', user.uid);
+    updateDocumentNonBlocking(userRef, { role: 'admin' });
+    toast({
+      title: "Role Updated",
+      description: "You are now an administrator.",
+    });
+  };
+
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -276,6 +287,17 @@ export default function Home() {
           </div>
         </TabsContent>
 
+        <TabsContent value="users" className="mt-0">
+          {isAdminUser ? (
+            <UserManagement />
+          ) : (
+            <div className="p-10 text-center">
+              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
+              <h3 className="text-lg font-bold">Access Denied</h3>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="history" className="mt-0">
           <div className="px-6 pt-6 flex justify-between items-center">
             <h2 className="text-xl font-bold text-primary">Activity Logs</h2>
@@ -329,9 +351,8 @@ export default function Home() {
             <div className="space-y-2">
                <Tabs defaultValue="system" className="w-full">
                   <div className="px-6 pt-4">
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-xl p-1 h-11">
+                    <TabsList className="grid w-full grid-cols-2 bg-slate-100 rounded-xl p-1 h-11">
                       <TabsTrigger value="system" className="rounded-lg text-[10px] font-black uppercase">Policies</TabsTrigger>
-                      <TabsTrigger value="users" className="rounded-lg text-[10px] font-black uppercase">Users</TabsTrigger>
                       <TabsTrigger value="complaints" className="rounded-lg text-[10px] font-black uppercase relative">
                         Issues
                         {pendingComplaintsCount > 0 && (
@@ -343,7 +364,6 @@ export default function Home() {
                     </TabsList>
                   </div>
                   <TabsContent value="system"><SystemSettings /></TabsContent>
-                  <TabsContent value="users"><UserManagement /></TabsContent>
                   <TabsContent value="complaints"><ComplaintManager /></TabsContent>
                </Tabs>
             </div>
@@ -372,6 +392,17 @@ export default function Home() {
               
               <UserProfileDialog userId={user.uid} />
               
+              {userRole === 'guest' && (
+                <Button 
+                  variant="default" 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center gap-2 h-12 font-bold shadow-lg shadow-emerald-200"
+                  onClick={handleBecomeAdmin}
+                >
+                  <ShieldCheck size={18} />
+                  Claim Admin Role
+                </Button>
+              )}
+
               <ReportProblemDialog />
 
               <Button 
@@ -411,18 +442,26 @@ export default function Home() {
               </TabsTrigger>
             )}
             {isAdminUser && (
-              <TabsTrigger 
-                value="settings" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative"
-              >
-                <SettingsIcon size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
-                {pendingComplaintsCount > 0 && (
-                  <span className="absolute top-1 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-rose-500" />
-                )}
-              </TabsTrigger>
+              <>
+                <TabsTrigger 
+                  value="users" 
+                  className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                >
+                  <Users size={18} />
+                  <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="settings" 
+                  className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative"
+                >
+                  <SettingsIcon size={18} />
+                  <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
+                  {pendingComplaintsCount > 0 && (
+                    <span className="absolute top-1 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-rose-500" />
+                  )}
+                </TabsTrigger>
+              </>
             )}
-            {/* Note: The 'Users' tab is now merged into the 'Admin' (settings) tab for a cleaner bottom bar */}
           </TabsList>
         </div>
       </Tabs>
