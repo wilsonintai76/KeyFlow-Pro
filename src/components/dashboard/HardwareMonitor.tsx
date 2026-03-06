@@ -20,14 +20,21 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
     return doc(firestore, 'cabinet_status', 'main_cabinet');
   }, [firestore]);
 
-  const { data: status, isLoading } = useDoc<any>(statusDocRef);
+  const settingsDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'global');
+  }, [firestore]);
 
-  if (isLoading) return null;
+  const { data: status, isLoading: isStatusLoading } = useDoc<any>(statusDocRef);
+  const { data: settings, isLoading: isSettingsLoading } = useDoc<any>(settingsDocRef);
+
+  if (isStatusLoading || isSettingsLoading) return null;
 
   // Online if heartbeat received in last 60 seconds
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
   const isDoorOpen = status?.doorState === 'open';
   const pegStates = status?.pegStates || {};
+  const pegCount = settings?.pegCount || 10;
 
   if (minimalist) {
     return (
@@ -45,7 +52,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
                 <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </Badge>
-                <span className="text-[9px] font-black text-slate-400 uppercase">v{status?.firmwareVersion || '1.0.0'}</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{pegCount} SLOTS</span>
               </div>
             </div>
           </div>
@@ -92,7 +99,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           <div className="text-right">
             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Device FW</p>
             <p className="text-[11px] font-bold text-accent">
-              v{status?.firmwareVersion || '1.0.0'}
+              v{status?.firmwareVersion || '1.0.4'}
             </p>
           </div>
         </CardContent>
@@ -103,7 +110,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
             <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Activity size={12} className="text-accent" />
-              Peg Sensor Map
+              Dynamic Peg Map ({pegCount})
             </CardTitle>
             <div className="flex gap-3">
                <div className="flex items-center gap-1">
@@ -117,8 +124,8 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-4">
-            <div className="grid grid-cols-5 gap-2">
-              {[...Array(10)].map((_, i) => (
+            <div className="grid grid-cols-5 gap-2 max-h-[200px] overflow-y-auto pr-1">
+              {[...Array(pegCount)].map((_, i) => (
                 <div 
                   key={i} 
                   className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-1 transition-all border ${pegStates[i] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
@@ -137,7 +144,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           <AlertCircle size={16} />
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase">Hardware connection lost</span>
-            <span className="text-[9px] opacity-70">Check ESP32 power and WiFi signal.</span>
+            <span className="text-[9px] opacity-70">Cabinet hardware is not reporting heartbeat.</span>
           </div>
         </div>
       )}

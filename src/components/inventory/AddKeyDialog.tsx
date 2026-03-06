@@ -31,38 +31,35 @@ export function AddKeyDialog() {
   const [name, setName] = useState('');
   const [type, setType] = useState('Room');
   const [location, setLocation] = useState('');
+  const [pegIndex, setPegIndex] = useState('');
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Fetch dynamic categories from settings
   const settingsDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'global');
   }, [firestore]);
 
-  const { data: settings, isLoading: isSettingsLoading } = useDoc<any>(settingsDocRef);
+  const { data: settings } = useDoc<any>(settingsDocRef);
 
   const categories = settings?.categories && Array.isArray(settings.categories) 
     ? settings.categories 
     : ['Workshop', 'Room', 'Machine'];
 
-  // Ensure default type is valid when categories load
-  useEffect(() => {
-    if (categories.length > 0 && !categories.includes(type)) {
-      setType(categories[0]);
-    }
-  }, [categories]);
+  const pegCount = settings?.pegCount || 10;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !location || !firestore) return;
 
     const keysCollection = collection(firestore, 'keys');
+    const numericPegIndex = pegIndex ? parseInt(pegIndex) - 1 : null;
     
     addDocumentNonBlocking(keysCollection, {
       keyIdentifier: name,
       description: type,
       location: location,
+      pegIndex: numericPegIndex,
       currentStatus: 'available',
       createdAt: new Date().toISOString()
     });
@@ -75,6 +72,7 @@ export function AddKeyDialog() {
     setOpen(false);
     setName('');
     setLocation('');
+    setPegIndex('');
   };
 
   return (
@@ -89,41 +87,56 @@ export function AddKeyDialog() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-primary">Add New Key</DialogTitle>
             <DialogDescription>
-              Enter the details for the physical key to register it in the inventory.
+              Register a physical key and assign it to a cabinet slot.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-5 py-6">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className="font-bold text-sm">Key Identifier</Label>
+          <div className="grid gap-4 py-6">
+            <div className="grid gap-1.5">
+              <Label htmlFor="name" className="font-bold text-xs uppercase text-muted-foreground">Key Identifier</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. M7M / LAB-01"
+                placeholder="e.g. LAB-01"
                 className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="type" className="font-bold text-sm">Category</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100">
-                  {categories.map((cat: string) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="type" className="font-bold text-xs uppercase text-muted-foreground">Category</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {categories.map((cat: string) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="pegIndex" className="font-bold text-xs uppercase text-muted-foreground">Peg Slot (1-{pegCount})</Label>
+                <Input
+                  id="pegIndex"
+                  type="number"
+                  min="1"
+                  max={pegCount}
+                  value={pegIndex}
+                  onChange={(e) => setPegIndex(e.target.value)}
+                  placeholder="Optional"
+                  className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="location" className="font-bold text-sm">Storage Location</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="location" className="font-bold text-xs uppercase text-muted-foreground">Storage Detail</Label>
               <Input
                 id="location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Hitech Cabinet / Drawer 2"
+                placeholder="e.g. Drawer 2 / Bench A"
                 className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
                 required
               />

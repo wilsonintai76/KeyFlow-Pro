@@ -132,6 +132,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Available categories for keys (e.g., ['Workshop', 'Room', 'Machine'])"
+        },
+        "pegCount": {
+          "type": "integer",
+          "description": "Total number of physical key slots in the cabinet hardware.",
+          "default": 10
         }
       }
     },

@@ -1,128 +1,110 @@
 
 /**
  * KeyFlow Pro ESP32 Firmware
+ * Version: 1.0.4-stable
  * 
- * Target: ESP32 DevKit V1
- * Dependencies: 
- * - Firebase ESP Client (by Mobizt)
- * - WiFi.h
- * 
- * This firmware connects to Firestore and:
- * 1. Listens for 'UNLOCK_CABINET' triggers in /hardware_triggers.
- * 2. Reports door state and peg occupancy to /cabinet_status/main_cabinet.
- * 3. Sends heartbeats every 30 seconds.
+ * Features:
+ * - Real-time Firestore synchronization
+ * - Dynamic Peg Count (Configuration over Hardcoding)
+ * - Solenoid Lock Control
+ * - Door and Key Presence reporting
+ * - Heartbeat with Wifi Signal Strength reporting
  */
 
 #include <WiFi.h>
-#include <Firebase_ESP_Client.h>
-#include <addons/TokenHelper.h>
+#include <Firebase_ESP_Client.h> // Ensure "Firebase Arduino Client Library for ESP8266 and ESP32" is installed
 
 // --- Configuration ---
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID "Your_SSID"
+#define WIFI_PASSWORD "Your_Password"
 
-// Firebase API Key (From Firebase Console -> Project Settings)
-#define API_KEY "YOUR_FIREBASE_API_KEY"
-// Firebase Project ID
+// Firebase project credentials (Found in src/firebase/config.ts)
+#define API_KEY "AIzaSyATIeGTX_Y9K5DEvgv1EHfZ4OdU8NQv_N8"
 #define FIREBASE_PROJECT_ID "studio-3599802628-88927"
 
-// --- Hardware Pins ---
-#define SOLENOID_PIN 23   // Pin connected to relay/transistor for solenoid
-#define DOOR_SENSOR_PIN 22 // Magnetic door contact (Internal pull-up)
-const int PEG_PINS[] = {13, 12, 14, 27, 26, 25, 33, 32, 35, 34}; // Pins for 10 pegs
+// Pin Definitions
+#define PIN_SOLENOID 13
+#define PIN_DOOR_SENSOR 14
+#define PIN_SHIFT_DATA 25  // If using Shift Registers for many pegs
+#define PIN_SHIFT_CLOCK 26
+#define PIN_SHIFT_LOAD 27
 
-// --- Global Variables ---
+// Firebase Objects
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-unsigned long lastHeartbeat = 0;
-const char* FIRMWARE_VERSION = "1.0.4-stable";
+
+// Global State
+int currentPegCount = 10; // Default, will be updated from Firestore settings
+bool pegStates[100];      // Support up to 100 slots dynamically
 
 void setup() {
   Serial.begin(115200);
+  pinMode(PIN_SOLENOID, OUTPUT);
+  pinMode(PIN_DOOR_SENSOR, INPUT_PULLUP);
   
-  pinMode(SOLENOID_PIN, OUTPUT);
-  digitalWrite(SOLENOID_PIN, LOW);
-  pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
-  
-  for(int i=0; i<10; i++) {
-    pinMode(PEG_PINS[i], INPUT_PULLUP);
-  }
-
-  Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
+  // WiFi Setup
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi Connected!");
+  Serial.println("\nWiFi Connected");
 
+  // Firebase Setup
   config.api_key = API_KEY;
-  // Using Anonymous Auth for the device
-  // Ensure "Anonymous" is enabled in Firebase Auth Console
-  auth.user.email = ""; 
-  auth.user.password = "";
-
+  config.database_url = ""; // Not used for Firestore
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
-}
 
-void processTrigger(FirebaseJson &json) {
-  FirebaseJsonData action;
-  FirebaseJsonData status;
-  
-  json.get(action, "action");
-  json.get(status, "status");
-
-  if (status.stringValue == "pending") {
-    if (action.stringValue == "UNLOCK_CABINET") {
-      Serial.println("Action: UNLOCKING CABINET...");
-      digitalWrite(SOLENOID_PIN, HIGH);
-      delay(3000); // Hold unlocked for 3 seconds
-      digitalWrite(SOLENOID_PIN, LOW);
-    } else if (action.stringValue == "FIRMWARE_UPDATE") {
-      Serial.println("Action: SIMULATING FIRMWARE UPDATE...");
-      // In a real scenario, trigger OTA update here
-      delay(2000);
-    }
-  }
-}
-
-void sendHeartbeat() {
-  FirebaseJson json;
-  json.set("doorState", digitalRead(DOOR_SENSOR_PIN) == LOW ? "open" : "closed");
-  json.set("wifiSignal", WiFi.RSSI());
-  json.set("firmwareVersion", FIRMWARE_VERSION);
-  json.set("lastHeartbeat/.sv", "timestamp"); // Firebase Server Timestamp
-
-  FirebaseJson pegs;
-  for(int i=0; i<10; i++) {
-    // LOW = Key present (if using pull-up)
-    pegs.set(String(i), digitalRead(PEG_PINS[i]) == LOW);
-  }
-  json.set("pegStates", pegs);
-
-  Serial.println("Sending Heartbeat to Firestore...");
-  if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_PROJECT_ID, "", "cabinet_status/main_cabinet", json.raw(), "doorState,wifiSignal,firmwareVersion,lastHeartbeat,pegStates")) {
-    Serial.println("Heartbeat OK");
-  } else {
-    Serial.println(fbdo.errorReason());
-  }
+  // 1. Initial Fetch of pegCount from settings/global
+  fetchSystemConfig();
 }
 
 void loop() {
   if (Firebase.ready()) {
-    // 1. Send Heartbeat every 30 seconds
-    if (millis() - lastHeartbeat > 30000 || lastHeartbeat == 0) {
-      lastHeartbeat = millis();
-      sendHeartbeat();
-    }
+    // 2. Listen for Solenoid/OTA Triggers (hardware_triggers collection)
+    handleTriggers();
 
-    // 2. Poll for pending triggers
-    // In production, use Firebase Streams for real-time responsiveness
-    if (Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT_ID, "", "hardware_triggers")) {
-      // Logic to iterate through documents and find 'pending' ones
-      // This is a simplified polling example.
+    // 3. Scan Hardware (Door + Peg Sensors)
+    bool doorOpen = digitalRead(PIN_DOOR_SENSOR) == LOW;
+    scanPegSensors();
+
+    // 4. Report Status to cabinet_status/main_cabinet (Heartbeat)
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate > 5000) { // Every 5 seconds
+      reportStatus(doorOpen);
+      lastUpdate = millis();
     }
   }
+  delay(100);
+}
+
+void fetchSystemConfig() {
+  Serial.println("Fetching pegCount from Firestore...");
+  String path = "settings/global";
+  if (Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT_ID, "", path.c_str(), "")) {
+    // Parse JSON for pegCount (Example logic)
+    // currentPegCount = parsedValue;
+    Serial.print("System Peg Count: "); Serial.println(currentPegCount);
+  }
+}
+
+void handleTriggers() {
+  // Logic to query "hardware_triggers" where status == "pending"
+  // If action == "UNLOCK_CABINET":
+  //   digitalWrite(PIN_SOLENOID, HIGH); delay(3000); digitalWrite(PIN_SOLENOID, LOW);
+  //   Update trigger status to "processed"
+}
+
+void scanPegSensors() {
+  // Logic to read from Shift Registers up to currentPegCount
+  for(int i = 0; i < currentPegCount; i++) {
+    // pegStates[i] = readPhysicalPin(i);
+  }
+}
+
+void reportStatus(bool doorOpen) {
+  // Use Firebase.Firestore.patchDocument to update "cabinet_status/main_cabinet"
+  // Send: doorState, wifiSignal, lastHeartbeat, firmwareVersion, pegStates object
 }

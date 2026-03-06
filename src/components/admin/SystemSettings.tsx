@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Clock, Save, Loader2, Info, Tag, Cpu, RefreshCw, Activity } from 'lucide-react';
+import { Settings, Clock, Save, Loader2, Info, Tag, Cpu, RefreshCw, Activity, LayoutGrid } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,6 +19,7 @@ export function SystemSettings() {
   const { user } = useUser();
   const { toast } = useToast();
   const [duration, setDuration] = useState('24');
+  const [pegCount, setPegCount] = useState('10');
   const [categoriesText, setCategoriesText] = useState('Workshop, Room, Machine');
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingFirmware, setIsUpdatingFirmware] = useState(false);
@@ -41,6 +42,9 @@ export function SystemSettings() {
       if (settings.maxBorrowDurationHours) {
         setDuration(settings.maxBorrowDurationHours.toString());
       }
+      if (settings.pegCount) {
+        setPegCount(settings.pegCount.toString());
+      }
       if (settings.categories && Array.isArray(settings.categories)) {
         setCategoriesText(settings.categories.join(', '));
       }
@@ -52,12 +56,16 @@ export function SystemSettings() {
     setIsSaving(true);
 
     const numericDuration = parseInt(duration);
+    const numericPegCount = parseInt(pegCount);
+
     if (isNaN(numericDuration) || numericDuration <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Duration",
-        description: "Please enter a valid number of hours.",
-      });
+      toast({ variant: "destructive", title: "Invalid Duration", description: "Please enter a valid number of hours." });
+      setIsSaving(false);
+      return;
+    }
+
+    if (isNaN(numericPegCount) || numericPegCount <= 0 || numericPegCount > 100) {
+      toast({ variant: "destructive", title: "Invalid Peg Count", description: "Peg count must be between 1 and 100." });
       setIsSaving(false);
       return;
     }
@@ -69,6 +77,7 @@ export function SystemSettings() {
 
     setDocumentNonBlocking(settingsDocRef, {
       maxBorrowDurationHours: numericDuration,
+      pegCount: numericPegCount,
       categories: categoriesArray,
       updatedAt: new Date().toISOString()
     }, { merge: true });
@@ -77,7 +86,7 @@ export function SystemSettings() {
       setIsSaving(false);
       toast({
         title: "Settings Saved",
-        description: "System policies and categories have been updated.",
+        description: "System policies and cabinet layout have been updated.",
       });
     }, 600);
   };
@@ -122,7 +131,6 @@ export function SystemSettings() {
         <p className="text-xs text-muted-foreground">Global configuration for the KeyFlow Pro ecosystem.</p>
       </div>
 
-      {/* Hardware Maintenance Card */}
       <Card className="border-none shadow-sm overflow-hidden rounded-3xl bg-white">
         <CardHeader className="bg-slate-50 border-b pb-4">
           <div className="flex items-center gap-2 text-primary">
@@ -143,7 +151,7 @@ export function SystemSettings() {
             <div className="text-right space-y-1">
               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Firmware</p>
               <Badge variant="outline" className="text-[10px] font-bold border-accent/20 text-accent">
-                v{status?.firmwareVersion || '1.0.0'}
+                v{status?.firmwareVersion || '1.0.4'}
               </Badge>
             </div>
           </div>
@@ -160,8 +168,36 @@ export function SystemSettings() {
               className="w-full h-11 rounded-xl border-accent/30 text-accent hover:bg-accent/5 font-bold gap-2"
             >
               {isUpdatingFirmware ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-              Update ESP32 Firmware
+              Push OTA Update
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
+        <CardHeader className="bg-slate-50 border-b pb-4">
+          <div className="flex items-center gap-2 text-primary">
+            <LayoutGrid size={18} className="text-accent" />
+            <CardTitle className="text-base font-bold">Cabinet Configuration</CardTitle>
+          </div>
+          <CardDescription className="text-xs">Define physical slot parameters.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-3">
+            <Label htmlFor="pegCount" className="text-sm font-bold">Total Key Slots (Peg Count)</Label>
+            <div className="flex items-center gap-3">
+              <Input 
+                id="pegCount" 
+                type="number"
+                value={pegCount}
+                onChange={(e) => setPegCount(e.target.value)}
+                className="bg-slate-50 border-slate-100 h-12 text-lg font-bold focus-visible:ring-accent"
+                min="1"
+                max="100"
+              />
+              <span className="text-sm font-medium text-muted-foreground">Slots</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground px-1">Changing this will update the dashboard visual map and tell the ESP32 how many pins to scan.</p>
           </div>
         </CardContent>
       </Card>
@@ -210,12 +246,6 @@ export function SystemSettings() {
               placeholder="e.g. Workshop, Room, Machine"
               className="bg-slate-50 border-slate-100 min-h-[100px] focus-visible:ring-accent"
             />
-            <div className="p-3 bg-blue-50/50 rounded-2xl flex items-start gap-3 border border-blue-100">
-              <Info size={16} className="text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-blue-700 leading-relaxed">
-                Enter categories separated by commas. These will appear in the "Category" dropdown when adding new keys.
-              </p>
-            </div>
           </div>
 
           <Button 
@@ -223,14 +253,7 @@ export function SystemSettings() {
             disabled={isSaving || isLoading}
             className="w-full bg-primary hover:bg-primary/90 text-white gap-2 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
           >
-            {isSaving ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <>
-                <Save size={18} />
-                Update System Settings
-              </>
-            )}
+            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Update System Config</>}
           </Button>
         </CardContent>
       </Card>
