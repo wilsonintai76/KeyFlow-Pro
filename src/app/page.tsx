@@ -81,25 +81,25 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading, error: profileError } = useDoc<any>(profileDocRef);
 
-  // Initialize profile as guest/admin if it doesn't exist
+  // Initialize profile as guest/admin ONLY if it explicitly does not exist
   useEffect(() => {
-    // Only attempt initialization if loading is finished, no data exists, AND there was no permission error
-    // If profileError exists, it means we don't have permission to read the profile, so we shouldn't try to write it.
+    // Only attempt initialization if loading is finished, data is explicitly null (not found),
+    // and there was no permission error on the read.
     if (user && !isProfileLoading && profile === null && !profileError && firestore) {
-      const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
-      const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
+      const isMasterAdmin = user.email === 'wilsonintai76@gmail.com' || user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
       
       const newProfile = {
         id: user.uid,
         firstName: user.displayName?.split(' ')[0] || 'User',
         lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
         email: user.email || '',
-        role: (isAdminByUID || isAdminByEmail) ? 'admin' : 'guest',
+        role: isMasterAdmin ? 'admin' : 'guest',
         createdAt: new Date().toISOString()
       };
       
       const userRef = doc(firestore, 'user_profiles', user.uid);
-      setDocumentNonBlocking(userRef, newProfile, { merge: true });
+      // We use setDocumentNonBlocking without merge:true for initialization to avoid conflicts
+      setDocumentNonBlocking(userRef, newProfile, { merge: false });
     }
   }, [user, isProfileLoading, profile, profileError, firestore]);
 
