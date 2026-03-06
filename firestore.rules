@@ -37,13 +37,13 @@ service cloud.firestore {
 
     /**
      * @description User Profile management.
-     * Added permission for users to promote themselves to admin for prototyping.
+     * Admins can manage all profiles. Owners can manage their own with restrictions.
      */
     match /user_profiles/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && (request.resource.data.role == 'guest' || request.resource.data.role == 'admin' || userId == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' || request.auth.token.email == 'wilsonintai76@gmail.com');
-      allow update: if isOwner(userId) && (request.resource.data.role == 'admin' || request.resource.data.role == resource.data.role || isAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && (request.resource.data.role == 'admin' || request.resource.data.role == resource.data.role));
       allow delete: if isAdmin();
     }
 
