@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -36,75 +37,45 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    /**
-     * @description User Profile management.
-     */
     match /user_profiles/{uid} {
-      // Anyone signed in can read any profile (to see who has keys)
       allow read: if isSignedIn();
-      
-      // Allow creation of your own profile ONLY if it doesn't exist.
-      // New users MUST start as 'guest'.
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'guest';
-
-      // Allow updates:
-      // 1. Admins can update anything (role management).
-      // 2. Users can update their OWN metadata, but the 'role' MUST remain unchanged.
       allow update: if isAdmin() || (
         isSignedIn() && request.auth.uid == uid && (
           request.resource.data.role == resource.data.role
         )
       );
-      
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Key inventory.
-     */
     match /keys/{keyId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Activity logs (Checkout/Return). Restricted to Staff and Admins.
-     */
-    match /assignments/{assignmentId} {
-      allow get, list, create, update: if isStaff();
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Hardware triggers collection. Staff can trigger, ESP32 reads.
-     */
     match /hardware_triggers/{triggerId} {
       allow read, create, update: if isStaff();
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Cabinet status reported by ESP32.
-     */
     match /cabinet_status/{statusId} {
       allow read: if isSignedIn();
       allow write: if isStaff() || isAdmin();
     }
 
-    /**
-     * @description Global system settings. Only admins can modify.
-     */
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    /**
-     * @description Complaints collection.
-     */
     match /complaints/{complaintId} {
       allow create: if isSignedIn();
       allow read, update, delete: if isAdmin();
+    }
+
+    match /system_logs/{logId} {
+      allow read: if isAdmin() || isStaff();
+      allow create: if isSignedIn();
     }
   }
 }

@@ -1,18 +1,20 @@
+
 "use client";
 
 import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Shield, UserCog, Loader2 } from 'lucide-react';
+import { Search, UserCog, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function UserManagement() {
   const [search, setSearch] = useState('');
   const firestore = useFirestore();
+  const { user: currentUser } = useUser();
   const { toast } = useToast();
 
   const usersQuery = useMemoFirebase(() => {
@@ -28,11 +30,20 @@ export function UserManagement() {
     u.lastName?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleRoleChange = (userId: string, newRole: string) => {
-    if (!firestore) return;
+  const handleRoleChange = (userId: string, userName: string, oldRole: string, newRole: string) => {
+    if (!firestore || !currentUser) return;
     const userRef = doc(firestore, 'user_profiles', userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     
+    // Log the action
+    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+      type: 'USER_MGMT',
+      message: `Role changed for ${userName} from ${oldRole} to ${newRole}`,
+      userId: currentUser.uid,
+      userName: currentUser.displayName || 'Admin',
+      timestamp: new Date().toISOString()
+    });
+
     toast({
       title: "Role Updated",
       description: `User role has been changed to ${newRole}.`,
@@ -97,7 +108,7 @@ export function UserManagement() {
                     </div>
                     <Select 
                       value={userProfile.role} 
-                      onValueChange={(value) => handleRoleChange(userProfile.id, value)}
+                      onValueChange={(value) => handleRoleChange(userProfile.id, `${userProfile.firstName} ${userProfile.lastName}`, userProfile.role, value)}
                     >
                       <SelectTrigger className="h-8 w-28 text-[11px] font-bold bg-slate-50 border-none shadow-none rounded-lg focus:ring-accent">
                         <SelectValue />

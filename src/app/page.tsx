@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, History } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -9,10 +10,11 @@ import { KeyCard } from '@/components/inventory/KeyCard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { SystemSettings } from '@/components/admin/SystemSettings';
 import { ComplaintManager } from '@/components/admin/ComplaintManager';
+import { AuditLog } from '@/components/admin/AuditLog';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
 import { ReportProblemDialog } from '@/components/profile/ReportProblemDialog';
-import { Key, DashboardStats, Transaction, Complaint } from '@/lib/types';
+import { Key, DashboardStats, Complaint } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,12 +41,9 @@ export default function Home() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  // Inactivity Timer (10 Minutes)
   useEffect(() => {
     if (!user || !auth) return;
-
     let timeoutId: any;
-
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
@@ -53,23 +52,18 @@ export default function Home() {
           title: "Session Expired",
           description: "You have been signed out due to inactivity.",
         });
-      }, 10 * 60 * 1000); // 10 minutes
+      }, 10 * 60 * 1000);
     };
-
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handleActivity = () => resetTimer();
-
     events.forEach(event => document.addEventListener(event, handleActivity));
-
-    resetTimer(); // Initialize timer
-
+    resetTimer();
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, handleActivity));
     };
   }, [user, auth, toast]);
 
-  // Fetch user profile to check role
   const profileDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'user_profiles', user.uid);
@@ -77,17 +71,12 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading, error: profileError } = useDoc<any>(profileDocRef);
 
-  /**
-   * Defensive Profile Onboarding
-   */
   useEffect(() => {
     async function checkAndInitialize() {
       if (!user || !firestore || isProfileLoading || profileError || profile !== null) return;
-
       const snap = await getDoc(profileDocRef!);
       if (!snap.exists()) {
         const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
-        
         const newProfile = {
           id: user.uid,
           firstName: user.displayName?.split(' ')[0] || 'User',
@@ -96,11 +85,9 @@ export default function Home() {
           role: isMasterAdmin ? 'admin' : 'guest',
           createdAt: new Date().toISOString()
         };
-        
         setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
       }
     }
-
     checkAndInitialize();
   }, [user, isProfileLoading, profile, profileError, firestore, profileDocRef]);
 
@@ -108,16 +95,10 @@ export default function Home() {
   const isAdminUser = userRole === 'admin';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
-  // Real-time Queries
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
   }, [firestore, user?.uid]);
-
-  const assignmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isStaffOrAdmin) return null;
-    return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
-  }, [firestore, user?.uid, isStaffOrAdmin]);
 
   const pendingComplaintsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isAdminUser) return null;
@@ -125,7 +106,6 @@ export default function Home() {
   }, [firestore, user?.uid, isAdminUser]);
 
   const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
-  const { data: assignmentsData, isLoading: isAssignmentsLoading } = useCollection<any>(assignmentsQuery);
   const { data: pendingComplaints } = useCollection<Complaint>(pendingComplaintsQuery);
 
   const pendingComplaintsCount = pendingComplaints?.length || 0;
@@ -161,6 +141,15 @@ export default function Home() {
       status: 'pending'
     });
 
+    // Log the unlock action
+    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+      type: 'HARDWARE',
+      message: 'Cabinet manually unlocked from dashboard',
+      userId: user.uid,
+      userName: user.displayName || 'Staff',
+      timestamp: new Date().toISOString()
+    });
+
     toast({
       title: "Cabinet Access Requested",
       description: "Hardware signal sent. Cabinet will unlock shortly.",
@@ -186,11 +175,7 @@ export default function Home() {
           <p className="text-muted-foreground text-lg max-w-xs">Intelligent key tracking for secure environments.</p>
         </div>
         <div className="w-full max-w-xs space-y-3">
-          <Button 
-            onClick={() => initiateGoogleSignIn(auth)} 
-            className="w-full h-12 gap-3 text-base shadow-md"
-            variant="default"
-          >
+          <Button onClick={() => initiateGoogleSignIn(auth)} className="w-full h-12 gap-3 text-base shadow-md" variant="default">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -212,11 +197,9 @@ export default function Home() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsContent value="dashboard" className="mt-0">
           <KeyStats stats={stats} />
-          
           <div className="px-6 mb-6">
             <HardwareMonitor minimalist />
           </div>
-
           <div className="px-6 mb-6">
             <Card className={`border-none shadow-lg bg-gradient-to-br overflow-hidden ${isStaffOrAdmin ? 'from-primary to-primary/80 text-white' : 'from-slate-200 to-slate-300 text-slate-500'}`}>
               <CardContent className="p-5 flex items-center justify-between">
@@ -238,7 +221,6 @@ export default function Home() {
               </CardContent>
             </Card>
           </div>
-
           <div className="px-6 mb-4">
             <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
               <div className="w-1.5 h-4 bg-accent rounded-full" />
@@ -284,9 +266,10 @@ export default function Home() {
             <div className="space-y-2">
                <Tabs defaultValue="system" className="w-full">
                   <div className="px-6 pt-4">
-                    <TabsList className="grid w-full grid-cols-2 bg-slate-100 rounded-xl p-1 h-11">
-                      <TabsTrigger value="system" className="rounded-lg text-[10px] font-black uppercase">Policies</TabsTrigger>
-                      <TabsTrigger value="complaints" className="rounded-lg text-[10px] font-black uppercase relative">
+                    <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-xl p-1 h-11">
+                      <TabsTrigger value="system" className="rounded-lg text-[9px] font-black uppercase">Settings</TabsTrigger>
+                      <TabsTrigger value="audit" className="rounded-lg text-[9px] font-black uppercase">Audit</TabsTrigger>
+                      <TabsTrigger value="complaints" className="rounded-lg text-[9px] font-black uppercase relative">
                         Issues
                         {pendingComplaintsCount > 0 && (
                           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] text-white">
@@ -297,6 +280,7 @@ export default function Home() {
                     </TabsList>
                   </div>
                   <TabsContent value="system"><SystemSettings /></TabsContent>
+                  <TabsContent value="audit"><AuditLog /></TabsContent>
                   <TabsContent value="complaints"><ComplaintManager /></TabsContent>
                </Tabs>
             </div>
@@ -322,16 +306,9 @@ export default function Home() {
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>
-              
               <UserProfileDialog userId={user.uid} />
-              
               <ReportProblemDialog />
-
-              <Button 
-                variant="outline" 
-                className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl flex items-center justify-center gap-2 h-12 font-semibold"
-                onClick={() => auth.signOut()}
-              >
+              <Button variant="outline" className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl flex items-center justify-center gap-2 h-12 font-semibold" onClick={() => auth.signOut()}>
                 <LogOut size={18} />
                 Sign Out
               </Button>
@@ -340,33 +317,21 @@ export default function Home() {
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
           <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-4' : (isStaffOrAdmin ? 'grid-cols-3' : 'grid-cols-2')} bg-transparent gap-1`}>
-            <TabsTrigger 
-              value="dashboard" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
+            <TabsTrigger value="dashboard" className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <LayoutDashboard size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Dash</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="inventory" 
-              className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
+            <TabsTrigger value="inventory" className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <KeyIcon size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Keys</span>
             </TabsTrigger>
             {isAdminUser && (
               <>
-                <TabsTrigger 
-                  value="users" 
-                  className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-                >
+                <TabsTrigger value="users" className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                   <Users size={18} />
                   <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="settings" 
-                  className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative"
-                >
+                <TabsTrigger value="settings" className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative">
                   <SettingsIcon size={18} />
                   <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
                   {pendingComplaintsCount > 0 && (
@@ -376,10 +341,7 @@ export default function Home() {
               </>
             )}
             {!isAdminUser && isStaffOrAdmin && (
-               <TabsTrigger 
-                value="profile" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
+               <TabsTrigger value="profile" className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                 <UserIcon size={18} />
                 <span className="text-[9px] font-bold uppercase tracking-tight">Me</span>
               </TabsTrigger>

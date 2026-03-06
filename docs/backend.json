@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -147,6 +148,20 @@
         "status": { "type": "string", "enum": ["pending", "resolved"] },
         "timestamp": { "type": "string", "format": "date-time" }
       }
+    },
+    "SystemLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemLog",
+      "type": "object",
+      "description": "A recorded event for auditing system activity.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["HARDWARE", "USER_MGMT", "INVENTORY", "AUTH"] },
+        "message": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -216,6 +231,16 @@
             "$ref": "#/backend/entities/Complaint"
           },
           "description": "User reported issues and complaints."
+        }
+      },
+      {
+        "path": "/system_logs/{logId}",
+        "definition": {
+          "entityName": "SystemLog",
+          "schema": {
+            "$ref": "#/backend/entities/SystemLog"
+          },
+          "description": "Audit logs for tracking system-wide activity."
         }
       }
     ]
