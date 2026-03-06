@@ -4,7 +4,7 @@
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { MapPin, Tag, Trash2, ShieldCheck, ShieldAlert, User, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useFirestore, deleteDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
@@ -28,6 +28,14 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   }, [firestore]);
 
   const { data: status } = useDoc<any>(statusDocRef);
+
+  // Fetch assignee profile if key is not available (checked out or overdue)
+  const assigneeDocRef = useMemoFirebase(() => {
+    if (!firestore || !keyData.currentAssigneeId || keyData.status === 'available') return null;
+    return doc(firestore, 'user_profiles', keyData.currentAssigneeId);
+  }, [firestore, keyData.currentAssigneeId, keyData.status]);
+
+  const { data: assigneeProfile, isLoading: isAssigneeLoading } = useDoc<any>(assigneeDocRef);
 
   const isPhysicallyPresent = keyData.pegIndex !== undefined && status?.pegStates?.[keyData.pegIndex] === true;
 
@@ -110,10 +118,28 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
         </div>
       </div>
 
-      {keyData.currentAssigneeId && (
-        <div className="mt-3 pt-3 border-t flex items-center justify-between text-[11px]">
-          <span className="text-muted-foreground uppercase font-semibold">Assigned To:</span>
-          <span className="font-bold text-primary truncate ml-2">{keyData.currentAssigneeId}</span>
+      {keyData.status !== 'available' && (
+        <div className="mt-3 pt-3 border-t flex flex-col gap-2">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Currently Held By</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="bg-slate-100 p-1 rounded-full text-slate-500">
+                <User size={12} />
+              </div>
+              <span className="text-xs font-bold text-primary truncate">
+                {isAssigneeLoading ? 'Loading...' : (assigneeProfile ? `${assigneeProfile.firstName} ${assigneeProfile.lastName}` : 'Unknown User')}
+              </span>
+            </div>
+            {assigneeProfile?.phoneNumber && (
+              <a 
+                href={`tel:${assigneeProfile.phoneNumber}`}
+                className="flex items-center gap-1 text-[10px] font-bold text-accent hover:text-accent/80 transition-colors"
+              >
+                <Phone size={10} />
+                {assigneeProfile.phoneNumber}
+              </a>
+            )}
+          </div>
         </div>
       )}
     </Card>
