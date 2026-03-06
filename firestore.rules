@@ -19,7 +19,6 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'wilsonintai76@gmail.com' ||
-        request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2' ||
         (
           exists(/databases/$(database)/documents/user_profiles/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.role == 'admin'
@@ -41,18 +40,21 @@ service cloud.firestore {
      * @description User Profile management.
      */
     match /user_profiles/{uid} {
+      // Anyone signed in can read any profile (to see who has keys)
       allow read: if isSignedIn();
       
-      // Allow creation of your own profile (only if it doesn't exist)
-      // This is crucial for onboarding.
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      // Allow creation of your own profile ONLY if it doesn't exist.
+      // New users MUST start as 'guest'.
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'guest';
 
-      // Allow updates to own profile (metadata only) or full admin control
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && (
-        // Only allow self-update if the role field remains exactly the same as existing data
-        // This prevents users from promoting themselves.
-        request.resource.data.role == resource.data.role
-      ));
+      // Allow updates:
+      // 1. Admins can update anything (role management).
+      // 2. Users can update their OWN metadata, but the 'role' MUST remain unchanged.
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == uid && (
+          request.resource.data.role == resource.data.role
+        )
+      );
       
       allow delete: if isAdmin();
     }

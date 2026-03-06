@@ -29,7 +29,7 @@ import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking
 } from '@/firebase';
-import { collection, query, orderBy, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { INITIAL_ASSIGNEES } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -80,29 +80,38 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading, error: profileError } = useDoc<any>(profileDocRef);
 
-  // Initialize profile as guest/admin ONLY if it explicitly does not exist
+  /**
+   * Defensive Profile Onboarding
+   * We only attempt to create a profile if we are 100% sure the document 
+   * does not already exist in Firestore. This prevents permission errors
+   * when an existing 'staff' user signs in and the app mistakenly tries 
+   * to demote them to 'guest'.
+   */
   useEffect(() => {
-    // Only attempt initialization if loading is completely finished, data is explicitly null (not found),
-    // and there was no error on the read. This prevents race conditions.
-    if (user && profileDocRef && !isProfileLoading && profile === null && !profileError && firestore) {
-      // The ONLY master admin is wilsonintai76@gmail.com
-      const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
-      
-      const newProfile = {
-        id: user.uid,
-        firstName: user.displayName?.split(' ')[0] || 'User',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-        email: user.email || '',
-        role: isMasterAdmin ? 'admin' : 'guest',
-        createdAt: new Date().toISOString()
-      };
-      
-      const userRef = doc(firestore, 'user_profiles', user.uid);
-      // We use setDocumentNonBlocking with merge:true. 
-      // If the doc somehow exists with a higher role, the security rules will block this 'write' 
-      // as it would be changing the role field to 'guest'.
-      setDocumentNonBlocking(userRef, newProfile, { merge: true });
+    async function checkAndInitialize() {
+      if (!user || !firestore || isProfileLoading || profileError || profile !== null) return;
+
+      // Double-check with a direct getDoc call to be absolutely sure
+      const snap = await getDoc(profileDocRef!);
+      if (!snap.exists()) {
+        const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
+        
+        const newProfile = {
+          id: user.uid,
+          firstName: user.displayName?.split(' ')[0] || 'User',
+          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+          email: user.email || '',
+          role: isMasterAdmin ? 'admin' : 'guest',
+          createdAt: new Date().toISOString()
+        };
+        
+        // We use setDocumentNonBlocking. Since snap.exists() was false, 
+        // the Security Rules for 'create' will apply.
+        setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
+      }
     }
+
+    checkAndInitialize();
   }, [user, isProfileLoading, profile, profileError, firestore, profileDocRef]);
 
   const userRole = profile?.role || 'guest';
