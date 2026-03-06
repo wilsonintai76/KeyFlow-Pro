@@ -52,7 +52,7 @@ export default function Home() {
           title: "Session Expired",
           description: "You have been signed out due to inactivity.",
         });
-      }, 10 * 60 * 1000);
+      }, 15 * 60 * 1000); // 15 minute session for active staff
     };
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handleActivity = () => resetTimer();
@@ -79,7 +79,9 @@ export default function Home() {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
           const email = user.email?.toLowerCase();
+          // Master Admin
           const isMasterAdmin = email === 'wilsonintai76@gmail.com';
+          // Trusted Staff / Key Borrower
           const isTrustedStaff = email === 'wilson@poliku.edu.my';
           
           let role = 'guest';
@@ -160,8 +162,8 @@ export default function Home() {
     });
 
     toast({
-      title: "Cabinet Access Requested",
-      description: "Hardware signal sent. Cabinet will unlock shortly.",
+      title: "Access Granted",
+      description: "Cabinet solenoid triggered. You may now access the keys.",
     });
   };
 
@@ -181,7 +183,7 @@ export default function Home() {
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-primary">KeyFlow Pro</h1>
-          <p className="text-muted-foreground text-lg max-w-xs">Intelligent key tracking for secure environments.</p>
+          <p className="text-muted-foreground text-lg max-w-xs">Secure physical key management powered by Firestore.</p>
         </div>
         <div className="w-full max-w-xs space-y-3">
           <Button onClick={() => initiateGoogleSignIn(auth)} className="w-full h-12 gap-3 text-base shadow-md" variant="default">
