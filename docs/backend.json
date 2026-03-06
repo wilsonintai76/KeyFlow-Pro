@@ -53,7 +53,7 @@
       "description": "A signal sent to hardware (ESP32) to perform an action like triggering a solenoid.",
       "properties": {
         "id": { "type": "string" },
-        "action": { "type": "string", "enum": ["UNLOCK_CABINET"] },
+        "action": { "type": "string", "enum": ["UNLOCK_CABINET", "FIRMWARE_UPDATE"] },
         "timestamp": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "processed"] }
@@ -68,6 +68,7 @@
         "doorState": { "type": "string", "enum": ["open", "closed"] },
         "lastHeartbeat": { "type": "string", "format": "date-time" },
         "wifiSignal": { "type": "integer" },
+        "firmwareVersion": { "type": "string" },
         "pegStates": {
           "type": "object",
           "description": "Map of peg index to presence (true = key in, false = key out)",

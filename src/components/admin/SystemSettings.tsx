@@ -2,29 +2,39 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, useUser } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Clock, Save, Loader2, Info, Tag } from 'lucide-react';
+import { Settings, Clock, Save, Loader2, Info, Tag, Cpu, RefreshCw, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
 
 export function SystemSettings() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [duration, setDuration] = useState('24');
   const [categoriesText, setCategoriesText] = useState('Workshop, Room, Machine');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingFirmware, setIsUpdatingFirmware] = useState(false);
 
   const settingsDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'global');
   }, [firestore]);
 
+  const statusDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'cabinet_status', 'main_cabinet');
+  }, [firestore]);
+
   const { data: settings, isLoading } = useDoc<any>(settingsDocRef);
+  const { data: status } = useDoc<any>(statusDocRef);
 
   useEffect(() => {
     if (settings) {
@@ -52,7 +62,6 @@ export function SystemSettings() {
       return;
     }
 
-    // Process categories: split by comma, trim, and remove empty strings
     const categoriesArray = categoriesText
       .split(',')
       .map(cat => cat.trim())
@@ -64,7 +73,6 @@ export function SystemSettings() {
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
-    // Artificial delay for UX feel
     setTimeout(() => {
       setIsSaving(false);
       toast({
@@ -73,6 +81,36 @@ export function SystemSettings() {
       });
     }, 600);
   };
+
+  const handleFirmwareUpdate = () => {
+    if (!firestore || !user) return;
+    setIsUpdatingFirmware(true);
+
+    addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
+      action: 'FIRMWARE_UPDATE',
+      timestamp: new Date().toISOString(),
+      userId: user.uid,
+      status: 'pending'
+    });
+
+    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+      type: 'HARDWARE',
+      message: 'Firmware update signal pushed to ESP32',
+      userId: user.uid,
+      userName: user.displayName || 'Admin',
+      timestamp: new Date().toISOString()
+    });
+
+    setTimeout(() => {
+      setIsUpdatingFirmware(false);
+      toast({
+        title: "Update Pushed",
+        description: "The ESP32 has been signaled to perform a firmware check.",
+      });
+    }, 1000);
+  };
+
+  const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
 
   return (
     <div className="px-6 py-4 space-y-6 mb-20">
@@ -83,6 +121,50 @@ export function SystemSettings() {
         </h2>
         <p className="text-xs text-muted-foreground">Global configuration for the KeyFlow Pro ecosystem.</p>
       </div>
+
+      {/* Hardware Maintenance Card */}
+      <Card className="border-none shadow-sm overflow-hidden rounded-3xl bg-white">
+        <CardHeader className="bg-slate-50 border-b pb-4">
+          <div className="flex items-center gap-2 text-primary">
+            <Cpu size={18} className="text-accent" />
+            <CardTitle className="text-base font-bold">Hardware Maintenance</CardTitle>
+          </div>
+          <CardDescription className="text-xs">Monitor and update the physical ESP32 cabinet.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Device Status</p>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                <span className="text-sm font-bold text-primary">{isOnline ? 'Online' : 'Offline'}</span>
+              </div>
+            </div>
+            <div className="text-right space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Firmware</p>
+              <Badge variant="outline" className="text-[10px] font-bold border-accent/20 text-accent">
+                v{status?.firmwareVersion || '1.0.0'}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium px-1">
+              <Activity size={12} className="text-accent" />
+              Last Heartbeat: {status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
+            </div>
+            <Button 
+              onClick={handleFirmwareUpdate}
+              disabled={isUpdatingFirmware || !isOnline}
+              variant="outline"
+              className="w-full h-11 rounded-xl border-accent/30 text-accent hover:bg-accent/5 font-bold gap-2"
+            >
+              {isUpdatingFirmware ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+              Update ESP32 Firmware
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
         <CardHeader className="bg-slate-50 border-b pb-4">
@@ -152,10 +234,6 @@ export function SystemSettings() {
           </Button>
         </CardContent>
       </Card>
-
-      <div className="p-6 border border-dashed rounded-3xl text-center">
-        <p className="text-xs text-muted-foreground italic">Hardware synchronization and API integration settings are currently managed by technical staff.</p>
-      </div>
     </div>
   );
 }

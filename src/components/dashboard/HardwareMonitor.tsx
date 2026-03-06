@@ -5,7 +5,7 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
+import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle, Cpu } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface HardwareMonitorProps {
@@ -24,6 +24,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
 
   if (isLoading) return null;
 
+  // Online if heartbeat received in last 60 seconds
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
   const isDoorOpen = status?.doorState === 'open';
   const pegStates = status?.pegStates || {};
@@ -40,9 +41,12 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
               <p className="text-sm font-bold text-primary">
                 {isDoorOpen ? 'Cabinet Open' : 'Cabinet Locked'}
               </p>
-              <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold mt-1 ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
-                {isOnline ? 'ONLINE' : 'OFFLINE'}
-              </Badge>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
+                  {isOnline ? 'ONLINE' : 'OFFLINE'}
+                </Badge>
+                <span className="text-[9px] font-black text-slate-400 uppercase">v{status?.firmwareVersion || '1.0.0'}</span>
+              </div>
             </div>
           </div>
           <div className="text-right">
@@ -86,9 +90,9 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           </div>
           
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Last Sync</p>
-            <p className="text-[11px] font-medium">
-              {status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Device FW</p>
+            <p className="text-[11px] font-bold text-accent">
+              v{status?.firmwareVersion || '1.0.0'}
             </p>
           </div>
         </CardContent>
@@ -129,9 +133,12 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
       )}
       
       {!isOnline && (
-        <div className="flex items-center gap-2 px-2 text-rose-500">
-          <AlertCircle size={14} />
-          <span className="text-[10px] font-bold uppercase">Hardware connection lost</span>
+        <div className="flex items-center gap-2 px-2 text-rose-500 bg-rose-50/50 py-3 rounded-2xl border border-rose-100 border-dashed">
+          <AlertCircle size={16} />
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase">Hardware connection lost</span>
+            <span className="text-[9px] opacity-70">Check ESP32 power and WiFi signal.</span>
+          </div>
         </div>
       )}
     </div>
