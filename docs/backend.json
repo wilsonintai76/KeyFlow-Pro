@@ -67,7 +67,12 @@
       "properties": {
         "doorState": { "type": "string", "enum": ["open", "closed"] },
         "lastHeartbeat": { "type": "string", "format": "date-time" },
-        "wifiSignal": { "type": "integer" }
+        "wifiSignal": { "type": "integer" },
+        "pegStates": {
+          "type": "object",
+          "description": "Map of peg index to presence (true = key in, false = key out)",
+          "additionalProperties": { "type": "boolean" }
+        }
       }
     },
     "Key": {
@@ -97,6 +102,10 @@
         },
         "lastAssignedToUserId": {
           "type": "string"
+        },
+        "pegIndex": {
+          "type": "integer",
+          "description": "The physical position/peg index in the hardware cabinet."
         }
       },
       "required": [

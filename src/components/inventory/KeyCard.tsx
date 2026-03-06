@@ -4,22 +4,32 @@
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2 } from "lucide-react";
+import { MapPin, Tag, Trash2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useFirestore, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, deleteDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { EditKeyDialog } from "./EditKeyDialog";
 
 interface KeyCardProps {
-  keyData: Key;
+  keyData: Key & { pegIndex?: number };
   isAdmin?: boolean;
 }
 
 export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  // Fetch live cabinet status to check physical presence
+  const statusDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'cabinet_status', 'main_cabinet');
+  }, [firestore]);
+
+  const { data: status } = useDoc<any>(statusDocRef);
+
+  const isPhysicallyPresent = keyData.pegIndex !== undefined && status?.pegStates?.[keyData.pegIndex] === true;
 
   const statusConfig: Record<KeyStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     available: { label: "Available", variant: "secondary" },
@@ -48,7 +58,18 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
     >
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-0.5 min-w-0">
-          <h3 className="font-semibold text-base text-foreground leading-tight truncate">{keyData.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-base text-foreground leading-tight truncate">{keyData.name}</h3>
+            {keyData.pegIndex !== undefined && (
+              <div 
+                className={cn(
+                  "w-2 h-2 rounded-full animate-pulse shrink-0", 
+                  isPhysicallyPresent ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-200"
+                )} 
+                title={isPhysicallyPresent ? "Physically Present" : "Physically Absent"}
+              />
+            )}
+          </div>
           <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider truncate">{keyData.id}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -74,9 +95,14 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
       </div>
       
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Tag size={12} className="text-accent" />
-          <span className="truncate">{keyData.type}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Tag size={12} className="text-accent" />
+            <span className="truncate">{keyData.type}</span>
+          </div>
+          {keyData.pegIndex !== undefined && (
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">PEG #{keyData.pegIndex + 1}</span>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin size={12} className="text-accent" />

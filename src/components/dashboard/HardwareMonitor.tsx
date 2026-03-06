@@ -3,9 +3,9 @@
 
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle } from 'lucide-react';
+import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function HardwareMonitor() {
@@ -22,9 +22,10 @@ export function HardwareMonitor() {
 
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
   const isDoorOpen = status?.doorState === 'open';
+  const pegStates = status?.pegStates || {};
 
   return (
-    <div className="px-6 mb-4">
+    <div className="px-6 mb-4 space-y-3">
       <Card className="border-none shadow-sm overflow-hidden rounded-2xl bg-white">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -57,9 +58,43 @@ export function HardwareMonitor() {
           </div>
         </CardContent>
       </Card>
+
+      {isOnline && (
+        <Card className="border-none shadow-sm overflow-hidden rounded-2xl bg-white">
+          <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+            <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Activity size={12} className="text-accent" />
+              Peg Sensor Map
+            </CardTitle>
+            <div className="flex gap-3">
+               <div className="flex items-center gap-1">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                 <span className="text-[9px] font-bold">IN</span>
+               </div>
+               <div className="flex items-center gap-1">
+                 <div className="w-2 h-2 rounded-full bg-slate-200" />
+                 <span className="text-[9px] font-bold">OUT</span>
+               </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-4">
+            <div className="grid grid-cols-5 gap-2">
+              {[...Array(10)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-1 transition-all border ${pegStates[i] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
+                >
+                  <Circle size={10} className={pegStates[i] ? 'fill-emerald-500 text-emerald-500' : 'text-slate-200'} />
+                  <span className="text-[8px] font-black opacity-40">#{i + 1}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {!isOnline && (
-        <div className="mt-2 flex items-center gap-2 px-2 text-rose-500">
+        <div className="flex items-center gap-2 px-2 text-rose-500">
           <AlertCircle size={14} />
           <span className="text-[10px] font-bold uppercase">Hardware connection lost</span>
         </div>
