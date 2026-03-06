@@ -79,12 +79,13 @@ export default function Home() {
     return doc(firestore, 'user_profiles', user.uid);
   }, [firestore, user?.uid]);
   
-  const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
+  const { data: profile, isLoading: isProfileLoading, error: profileError } = useDoc<any>(profileDocRef);
 
   // Initialize profile as guest/admin if it doesn't exist
   useEffect(() => {
-    if (user && !isProfileLoading && profile === null && firestore) {
-      // MASTER ADMIN WHITELIST - Only wilsonintai76 remains as bootstrap admin
+    // Only attempt initialization if loading is finished, no data exists, AND there was no permission error
+    // If profileError exists, it means we don't have permission to read the profile, so we shouldn't try to write it.
+    if (user && !isProfileLoading && profile === null && !profileError && firestore) {
       const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
       const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
       
@@ -100,7 +101,7 @@ export default function Home() {
       const userRef = doc(firestore, 'user_profiles', user.uid);
       setDocumentNonBlocking(userRef, newProfile, { merge: true });
     }
-  }, [user, isProfileLoading, profile, firestore]);
+  }, [user, isProfileLoading, profile, profileError, firestore]);
 
   const userRole = profile?.role || 'guest';
   const isAdminUser = userRole === 'admin';

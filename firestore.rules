@@ -15,7 +15,7 @@ service cloud.firestore {
 
     /**
      * @description Checks if the user is an administrator.
-     * Fallback to Master Admin email only if not explicitly demoted in database.
+     * Master Admin: wilsonintai76@gmail.com
      */
     function isAdmin() {
       return isSignedIn() && (
@@ -36,20 +36,19 @@ service cloud.firestore {
 
     /**
      * @description User Profile management.
-     * Users can create/manage their own profiles. Role changes restricted to admins.
      */
     match /user_profiles/{uid} {
       allow read: if isSignedIn();
       
-      // Allow creation if it's the user's own profile and they start as guest (or are master admin)
+      // Allow creation if it's the user's own profile and they start as guest
       allow create: if isSignedIn() && request.auth.uid == uid && (
         request.resource.data.role == 'guest' || 
-        request.auth.token.email == 'wilsonintai76@gmail.com' ||
-        request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2'
+        request.auth.token.email == 'wilsonintai76@gmail.com'
       );
 
       // Allow updates to own profile (cannot change role) or full admin control
       allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && (
+        // Only allow self-update if the role field remains exactly the same
         request.resource.data.role == resource.data.role
       ));
       
@@ -57,7 +56,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Key inventory. Admins can create and update (for maintenance).
+     * @description Key inventory.
      */
     match /keys/{keyId} {
       allow read: if isSignedIn();
