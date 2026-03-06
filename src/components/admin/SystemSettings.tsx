@@ -272,41 +272,45 @@ export function SystemSettings() {
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="pegCount" className="text-xs font-bold uppercase text-muted-foreground min-h-[32px] flex items-end pb-1">Total Slots</Label>
+              <div className="h-10 flex flex-col justify-end">
+                <Label htmlFor="pegCount" className="text-[10px] font-black uppercase text-muted-foreground leading-tight pb-1">Total Slots</Label>
+              </div>
               <Input 
                 id="pegCount" 
                 type="number"
                 value={pegCount}
                 onChange={(e) => setPegCount(e.target.value)}
-                className="bg-slate-50 h-11 rounded-xl font-bold"
+                className="bg-slate-50 h-10 rounded-xl font-bold border-none"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration" className="text-xs font-bold uppercase text-muted-foreground min-h-[32px] flex items-end pb-1">Borrow Limit (Hrs)</Label>
+              <div className="h-10 flex flex-col justify-end">
+                <Label htmlFor="duration" className="text-[10px] font-black uppercase text-muted-foreground leading-tight pb-1">Borrow Limit (Hrs)</Label>
+              </div>
               <Input 
                 id="duration" 
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="bg-slate-50 h-11 rounded-xl font-bold"
+                className="bg-slate-50 h-10 rounded-xl font-bold border-none"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="categories" className="text-xs font-bold uppercase text-muted-foreground">Key Categories</Label>
+            <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Key Categories</Label>
             <Textarea 
               id="categories" 
               value={categoriesText}
               onChange={(e) => setCategoriesText(e.target.value)}
-              className="bg-slate-50 min-h-[80px] rounded-xl text-xs"
+              className="bg-slate-50 min-h-[80px] rounded-xl text-xs border-none"
             />
           </div>
 
           <Button 
             onClick={handleSave} 
             disabled={isSaving}
-            className="w-full bg-primary text-white gap-2 rounded-xl h-12 font-bold"
+            className="w-full bg-primary text-white gap-2 rounded-xl h-12 font-bold shadow-lg shadow-primary/10"
           >
             {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             Save System Policies
