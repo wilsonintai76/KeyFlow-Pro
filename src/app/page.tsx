@@ -240,7 +240,7 @@ export default function Home() {
             ) : (
               <div className="space-y-1">
                 {keys.map(key => (
-                  <KeyCard key={key.id} keyData={key} isAdmin={isAdminUser} />
+                  <KeyCard key={key.id} keyData={key} isAdmin={false} />
                 ))}
               </div>
             )}
