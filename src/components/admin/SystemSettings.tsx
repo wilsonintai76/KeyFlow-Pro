@@ -156,7 +156,6 @@ export function SystemSettings() {
     }, 1000);
   };
 
-  // Web Serial API logic for "Direct USB Update"
   const handleDirectUsbFlash = async () => {
     if (!('serial' in navigator)) {
       toast({ 
@@ -171,7 +170,6 @@ export function SystemSettings() {
       title: "Direct Flash Mode",
       description: "Ensure your ESP32 is connected via USB. This feature requires the ESP Web Flasher library (not included in this MVP).",
     });
-    // In a production app, we would integrate 'esptool-js' here.
   };
 
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
@@ -274,7 +272,7 @@ export function SystemSettings() {
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="pegCount" className="text-xs font-bold uppercase text-muted-foreground">Total Slots</Label>
+              <Label htmlFor="pegCount" className="text-xs font-bold uppercase text-muted-foreground min-h-[32px] flex items-end pb-1">Total Slots</Label>
               <Input 
                 id="pegCount" 
                 type="number"
@@ -284,7 +282,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration" className="text-xs font-bold uppercase text-muted-foreground">Borrow Limit (Hrs)</Label>
+              <Label htmlFor="duration" className="text-xs font-bold uppercase text-muted-foreground min-h-[32px] flex items-end pb-1">Borrow Limit (Hrs)</Label>
               <Input 
                 id="duration" 
                 type="number"
