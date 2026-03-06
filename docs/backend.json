@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -133,6 +132,21 @@
           "description": "Available categories for keys (e.g., ['Workshop', 'Room', 'Machine'])"
         }
       }
+    },
+    "Complaint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Complaint",
+      "type": "object",
+      "description": "A problem report or complaint submitted by a user to the system admin.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -192,6 +206,16 @@
             "$ref": "#/backend/entities/GlobalSettings"
           },
           "description": "Global configuration documents."
+        }
+      },
+      {
+        "path": "/complaints/{complaintId}",
+        "definition": {
+          "entityName": "Complaint",
+          "schema": {
+            "$ref": "#/backend/entities/Complaint"
+          },
+          "description": "User reported issues and complaints."
         }
       }
     ]

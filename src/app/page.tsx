@@ -2,17 +2,19 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
 import { KeyCard } from '@/components/inventory/KeyCard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { SystemSettings } from '@/components/admin/SystemSettings';
+import { ComplaintManager } from '@/components/admin/ComplaintManager';
 import { TransactionHistory } from '@/components/history/TransactionHistory';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
-import { Key, DashboardStats, Transaction } from '@/lib/types';
+import { ReportProblemDialog } from '@/components/profile/ReportProblemDialog';
+import { Key, DashboardStats, Transaction, Complaint } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,7 +29,7 @@ import {
   addDocumentNonBlocking,
   setDocumentNonBlocking
 } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { INITIAL_ASSIGNEES } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -81,7 +83,6 @@ export default function Home() {
   // Initialize profile as guest if it doesn't exist
   useEffect(() => {
     if (user && !isProfileLoading && profile === null && firestore) {
-      // Wilson Intai (Admin) check
       const isAdminByUID = user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
       const isAdminByEmail = user.email === 'wilsonintai76@gmail.com';
       
@@ -103,6 +104,7 @@ export default function Home() {
   const isAdminUser = userRole === 'admin';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
+  // Real-time Queries
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
@@ -113,8 +115,17 @@ export default function Home() {
     return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
   }, [firestore, user?.uid, isStaffOrAdmin]);
 
+  // Notification query for Admins (Pending Complaints)
+  const pendingComplaintsQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !isAdminUser) return null;
+    return query(collection(firestore, 'complaints'), where('status', '==', 'pending'));
+  }, [firestore, user?.uid, isAdminUser]);
+
   const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
   const { data: assignmentsData, isLoading: isAssignmentsLoading } = useCollection<any>(assignmentsQuery);
+  const { data: pendingComplaints } = useCollection<Complaint>(pendingComplaintsQuery);
+
+  const pendingComplaintsCount = pendingComplaints?.length || 0;
 
   const keys = useMemo(() => {
     return (keysData || []).map(k => ({
@@ -313,20 +324,29 @@ export default function Home() {
           )}
         </TabsContent>
 
-        <TabsContent value="users" className="mt-0">
-          {isAdminUser ? (
-            <UserManagement />
-          ) : (
-            <div className="p-10 text-center">
-              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
-              <h3 className="text-lg font-bold">Access Denied</h3>
-            </div>
-          )}
-        </TabsContent>
-
         <TabsContent value="settings" className="mt-0">
           {isAdminUser ? (
-            <SystemSettings />
+            <div className="space-y-2">
+               <Tabs defaultValue="system" className="w-full">
+                  <div className="px-6 pt-4">
+                    <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-xl p-1 h-11">
+                      <TabsTrigger value="system" className="rounded-lg text-[10px] font-black uppercase">Policies</TabsTrigger>
+                      <TabsTrigger value="users" className="rounded-lg text-[10px] font-black uppercase">Users</TabsTrigger>
+                      <TabsTrigger value="complaints" className="rounded-lg text-[10px] font-black uppercase relative">
+                        Issues
+                        {pendingComplaintsCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] text-white">
+                            {pendingComplaintsCount}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <TabsContent value="system"><SystemSettings /></TabsContent>
+                  <TabsContent value="users"><UserManagement /></TabsContent>
+                  <TabsContent value="complaints"><ComplaintManager /></TabsContent>
+               </Tabs>
+            </div>
           ) : (
             <div className="p-10 text-center">
               <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
@@ -336,7 +356,7 @@ export default function Home() {
         </TabsContent>
 
         <TabsContent value="profile" className="mt-0 p-6">
-           <div className="space-y-6">
+           <div className="space-y-4">
               <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-3xl shadow-sm border">
                 <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary border-4 border-white shadow-lg relative">
                   <UserIcon size={40} />
@@ -349,10 +369,14 @@ export default function Home() {
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>
+              
               <UserProfileDialog userId={user.uid} />
+              
+              <ReportProblemDialog />
+
               <Button 
                 variant="outline" 
-                className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl flex items-center justify-center gap-2"
+                className="w-full border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl flex items-center justify-center gap-2 h-12 font-semibold"
                 onClick={() => auth.signOut()}
               >
                 <LogOut size={18} />
@@ -388,22 +412,17 @@ export default function Home() {
             )}
             {isAdminUser && (
               <TabsTrigger 
-                value="users" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                <Users size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">Users</span>
-              </TabsTrigger>
-            )}
-            {isAdminUser && (
-              <TabsTrigger 
                 value="settings" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative"
               >
                 <SettingsIcon size={18} />
                 <span className="text-[9px] font-bold uppercase tracking-tight">Admin</span>
+                {pendingComplaintsCount > 0 && (
+                  <span className="absolute top-1 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-rose-500" />
+                )}
               </TabsTrigger>
             )}
+            {/* Note: The 'Users' tab is now merged into the 'Admin' (settings) tab for a cleaner bottom bar */}
           </TabsList>
         </div>
       </Tabs>

@@ -34,3 +34,13 @@ export type DashboardStats = {
   checkedOut: number;
   overdue: number;
 };
+
+export interface Complaint {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  description: string;
+  status: 'pending' | 'resolved';
+  timestamp: string;
+}
