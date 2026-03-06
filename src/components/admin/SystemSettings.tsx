@@ -1,29 +1,57 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, useUser } from '@/firebase';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  useDoc, 
+  useFirestore, 
+  useMemoFirebase, 
+  setDocumentNonBlocking, 
+  addDocumentNonBlocking, 
+  useUser,
+  useStorage
+} from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Clock, Save, Loader2, Tag, Cpu, RefreshCw, Activity, LayoutGrid, Link as LinkIcon } from 'lucide-react';
+import { 
+  Settings, 
+  Clock, 
+  Save, 
+  Loader2, 
+  Tag, 
+  Cpu, 
+  RefreshCw, 
+  Activity, 
+  LayoutGrid, 
+  Link as LinkIcon, 
+  Upload, 
+  Usb,
+  ShieldCheck
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
 export function SystemSettings() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const { user } = useUser();
   const { toast } = useToast();
+  
   const [duration, setDuration] = useState('24');
   const [pegCount, setPegCount] = useState('10');
   const [firmwareUrl, setFirmwareUrl] = useState('');
   const [categoriesText, setCategoriesText] = useState('Workshop, Room, Machine');
+  
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isUpdatingFirmware, setIsUpdatingFirmware] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const settingsDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -40,20 +68,37 @@ export function SystemSettings() {
 
   useEffect(() => {
     if (settings) {
-      if (settings.maxBorrowDurationHours) {
-        setDuration(settings.maxBorrowDurationHours.toString());
-      }
-      if (settings.pegCount) {
-        setPegCount(settings.pegCount.toString());
-      }
-      if (settings.categories && Array.isArray(settings.categories)) {
-        setCategoriesText(settings.categories.join(', '));
-      }
-      if (settings.lastFirmwareUrl) {
-        setFirmwareUrl(settings.lastFirmwareUrl);
-      }
+      if (settings.maxBorrowDurationHours) setDuration(settings.maxBorrowDurationHours.toString());
+      if (settings.pegCount) setPegCount(settings.pegCount.toString());
+      if (settings.categories) setCategoriesText(settings.categories.join(', '));
+      if (settings.lastFirmwareUrl) setFirmwareUrl(settings.lastFirmwareUrl);
     }
   }, [settings]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user) return;
+
+    if (!file.name.endsWith('.bin')) {
+      toast({ variant: "destructive", title: "Invalid File", description: "Only .bin firmware files are supported." });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `firmware/keyflow_pro_${Date.now()}.bin`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      
+      setFirmwareUrl(url);
+      toast({ title: "Upload Success", description: "Binary uploaded and URL generated." });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload binary to storage." });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSave = () => {
     if (!firestore || !settingsDocRef) return;
@@ -63,21 +108,12 @@ export function SystemSettings() {
     const numericPegCount = parseInt(pegCount);
 
     if (isNaN(numericDuration) || numericDuration <= 0) {
-      toast({ variant: "destructive", title: "Invalid Duration", description: "Please enter a valid number of hours." });
+      toast({ variant: "destructive", title: "Invalid Duration" });
       setIsSaving(false);
       return;
     }
 
-    if (isNaN(numericPegCount) || numericPegCount <= 0 || numericPegCount > 100) {
-      toast({ variant: "destructive", title: "Invalid Peg Count", description: "Peg count must be between 1 and 100." });
-      setIsSaving(false);
-      return;
-    }
-
-    const categoriesArray = categoriesText
-      .split(',')
-      .map(cat => cat.trim())
-      .filter(cat => cat.length > 0);
+    const categoriesArray = categoriesText.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0);
 
     setDocumentNonBlocking(settingsDocRef, {
       maxBorrowDurationHours: numericDuration,
@@ -89,25 +125,13 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsSaving(false);
-      toast({
-        title: "Settings Saved",
-        description: "System policies and cabinet layout have been updated.",
-      });
+      toast({ title: "Settings Saved" });
     }, 600);
   };
 
   const handleFirmwareUpdate = () => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || !firmwareUrl) return;
     
-    if (!firmwareUrl) {
-      toast({
-        variant: "destructive",
-        title: "URL Required",
-        description: "Please provide a firmware binary URL before updating.",
-      });
-      return;
-    }
-
     setIsUpdatingFirmware(true);
 
     addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
@@ -120,7 +144,7 @@ export function SystemSettings() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: `OTA Update triggered with binary: ${firmwareUrl.split('/').pop()}`,
+      message: `OTA Update triggered: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -128,11 +152,26 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsUpdatingFirmware(false);
-      toast({
-        title: "Signal Dispatched",
-        description: "The ESP32 has been signaled to fetch the new firmware binary.",
-      });
+      toast({ title: "Update Dispatched", description: "Device signaled to start OTA." });
     }, 1000);
+  };
+
+  // Web Serial API logic for "Direct USB Update"
+  const handleDirectUsbFlash = async () => {
+    if (!('serial' in navigator)) {
+      toast({ 
+        variant: "destructive", 
+        title: "Not Supported", 
+        description: "Your browser doesn't support Web Serial. Use Chrome or Edge." 
+      });
+      return;
+    }
+
+    toast({
+      title: "Direct Flash Mode",
+      description: "Ensure your ESP32 is connected via USB. This feature requires the ESP Web Flasher library (not included in this MVP).",
+    });
+    // In a production app, we would integrate 'esptool-js' here.
   };
 
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
@@ -142,65 +181,85 @@ export function SystemSettings() {
       <div className="space-y-1">
         <h2 className="text-xl font-bold text-primary flex items-center gap-2">
           <Settings size={22} className="text-accent" />
-          System Settings
+          Hardware & System
         </h2>
-        <p className="text-xs text-muted-foreground">Global configuration for the KeyFlow Pro ecosystem.</p>
+        <p className="text-xs text-muted-foreground">Manage physical slots and firmware logic.</p>
       </div>
 
       <Card className="border-none shadow-sm overflow-hidden rounded-3xl bg-white">
         <CardHeader className="bg-slate-50 border-b pb-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Cpu size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Hardware Maintenance</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-primary">
+              <Cpu size={18} className="text-accent" />
+              <CardTitle className="text-base font-bold">Firmware Maintenance</CardTitle>
+            </div>
+            <Badge variant={isOnline ? "default" : "outline"} className={isOnline ? "bg-emerald-500" : "text-slate-400"}>
+              {isOnline ? "ONLINE" : "OFFLINE"}
+            </Badge>
           </div>
-          <CardDescription className="text-xs">Monitor and push Over-The-Air updates.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+        <CardContent className="p-6 space-y-6">
+          <div className="p-4 bg-slate-50 rounded-2xl border border-dashed flex flex-col items-center gap-3 text-center">
+            <div className="bg-white p-3 rounded-full shadow-sm text-primary">
+              <Usb size={24} />
+            </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Device Status</p>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                <span className="text-sm font-bold text-primary">{isOnline ? 'Online' : 'Offline'}</span>
-              </div>
-            </div>
-            <div className="text-right space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Firmware</p>
-              <Badge variant="outline" className="text-[10px] font-bold border-accent/20 text-accent">
-                v{status?.firmwareVersion || '1.0.4'}
-              </Badge>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label htmlFor="firmwareUrl" className="text-xs font-bold uppercase text-muted-foreground">Firmware Binary URL (.bin)</Label>
-            <div className="relative">
-              <LinkIcon className="absolute left-3 top-3 text-muted-foreground" size={16} />
-              <Input 
-                id="firmwareUrl"
-                placeholder="https://storage.googleapis.com/..."
-                value={firmwareUrl}
-                onChange={(e) => setFirmwareUrl(e.target.value)}
-                className="pl-10 h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent text-xs"
-              />
-            </div>
-            <p className="text-[9px] text-muted-foreground italic px-1">Host your compiled binary on Firebase Storage or a public server.</p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium px-1">
-              <Activity size={12} className="text-accent" />
-              Last Heartbeat: {status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
+              <h4 className="text-sm font-bold">Local USB Flash</h4>
+              <p className="text-[10px] text-muted-foreground">Update your device directly via USB cable (No Internet required).</p>
             </div>
             <Button 
-              onClick={handleFirmwareUpdate}
-              disabled={isUpdatingFirmware || !isOnline || !firmwareUrl}
-              variant="outline"
-              className="w-full h-11 rounded-xl border-accent/30 text-accent hover:bg-accent/5 font-bold gap-2"
+              variant="outline" 
+              onClick={handleDirectUsbFlash}
+              className="w-full h-10 rounded-xl font-bold text-xs gap-2"
             >
-              {isUpdatingFirmware ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-              Push OTA Update
+              <Usb size={14} />
+              Connect & Flash via USB
             </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-px bg-slate-200 flex-1" />
+              <span className="text-[10px] font-black text-slate-400 uppercase">OR REMOTE OTA</span>
+              <div className="h-px bg-slate-200 flex-1" />
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Direct Binary Upload</Label>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="hidden" 
+                accept=".bin" 
+              />
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                variant="secondary"
+                className="w-full h-12 rounded-xl bg-accent/10 border-accent/20 border-dashed text-primary hover:bg-accent/20 font-bold gap-2"
+              >
+                {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                Select .bin file from PC
+              </Button>
+            </div>
+
+            {firmwareUrl && (
+              <div className="space-y-2 animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                  <ShieldCheck className="text-emerald-500" size={16} />
+                  <p className="text-[10px] font-bold text-emerald-700 truncate">Ready: {firmwareUrl.split('/').pop()?.substring(0, 30)}...</p>
+                </div>
+                <Button 
+                  onClick={handleFirmwareUpdate}
+                  disabled={isUpdatingFirmware || !isOnline}
+                  className="w-full h-12 rounded-xl bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20"
+                >
+                  {isUpdatingFirmware ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={16} />}
+                  Execute Remote Update
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -209,81 +268,50 @@ export function SystemSettings() {
         <CardHeader className="bg-slate-50 border-b pb-4">
           <div className="flex items-center gap-2 text-primary">
             <LayoutGrid size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Cabinet Configuration</CardTitle>
+            <CardTitle className="text-base font-bold">Cabinet Layout</CardTitle>
           </div>
-          <CardDescription className="text-xs">Define physical slot parameters.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
-          <div className="space-y-3">
-            <Label htmlFor="pegCount" className="text-sm font-bold">Total Key Slots (Peg Count)</Label>
-            <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="pegCount" className="text-xs font-bold uppercase text-muted-foreground">Total Slots</Label>
               <Input 
                 id="pegCount" 
                 type="number"
                 value={pegCount}
                 onChange={(e) => setPegCount(e.target.value)}
-                className="bg-slate-50 border-slate-100 h-12 text-lg font-bold focus-visible:ring-accent"
-                min="1"
-                max="100"
+                className="bg-slate-50 h-11 rounded-xl font-bold"
               />
-              <span className="text-sm font-medium text-muted-foreground">Slots</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
-        <CardHeader className="bg-slate-50 border-b pb-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Clock size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Borrow Policies</CardTitle>
-          </div>
-          <CardDescription className="text-xs">Configure overdue thresholds.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-3">
-            <Label htmlFor="duration" className="text-sm font-bold">Max Borrow Duration (Hours)</Label>
-            <div className="flex items-center gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="duration" className="text-xs font-bold uppercase text-muted-foreground">Borrow Limit (Hrs)</Label>
               <Input 
                 id="duration" 
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="bg-slate-50 border-slate-100 h-12 text-lg font-bold focus-visible:ring-accent"
-                min="1"
+                className="bg-slate-50 h-11 rounded-xl font-bold"
               />
-              <span className="text-sm font-medium text-muted-foreground">Hours</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
-        <CardHeader className="bg-slate-50 border-b pb-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Tag size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Category Management</CardTitle>
-          </div>
-          <CardDescription className="text-xs">Define available key categories.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-3">
-            <Label htmlFor="categories" className="text-sm font-bold">Key Categories</Label>
+          <div className="space-y-2">
+            <Label htmlFor="categories" className="text-xs font-bold uppercase text-muted-foreground">Key Categories</Label>
             <Textarea 
               id="categories" 
               value={categoriesText}
               onChange={(e) => setCategoriesText(e.target.value)}
-              placeholder="e.g. Workshop, Room, Machine"
-              className="bg-slate-50 border-slate-100 min-h-[100px] focus-visible:ring-accent"
+              className="bg-slate-50 min-h-[80px] rounded-xl text-xs"
             />
           </div>
 
           <Button 
             onClick={handleSave} 
-            disabled={isSaving || isLoading}
-            className="w-full bg-primary hover:bg-primary/90 text-white gap-2 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
+            disabled={isSaving}
+            className="w-full bg-primary text-white gap-2 rounded-xl h-12 font-bold"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Update System Config</>}
+            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+            Save System Policies
           </Button>
         </CardContent>
       </Card>
