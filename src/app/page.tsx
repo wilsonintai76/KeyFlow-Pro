@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -84,9 +83,10 @@ export default function Home() {
   // Initialize profile as guest/admin ONLY if it explicitly does not exist
   useEffect(() => {
     // Only attempt initialization if loading is finished, data is explicitly null (not found),
-    // and there was no permission error on the read.
+    // and there was no permission error on the read. This prevents race conditions.
     if (user && !isProfileLoading && profile === null && !profileError && firestore) {
-      const isMasterAdmin = user.email === 'wilsonintai76@gmail.com' || user.uid === 'cpygG7wuaQVcvOa0bjMCDzNc1DN2';
+      // The ONLY master admin is wilsonintai76@gmail.com
+      const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
       
       const newProfile = {
         id: user.uid,
@@ -99,6 +99,7 @@ export default function Home() {
       
       const userRef = doc(firestore, 'user_profiles', user.uid);
       // We use setDocumentNonBlocking without merge:true for initialization to avoid conflicts
+      // The rules will block this if it turns out the document ALREADY exists with a non-guest role
       setDocumentNonBlocking(userRef, newProfile, { merge: false });
     }
   }, [user, isProfileLoading, profile, profileError, firestore]);
@@ -178,7 +179,7 @@ export default function Home() {
     });
   };
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  if (isUserLoading || (user && isProfileLoading && !profileError)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="animate-spin text-primary" size={40} />
