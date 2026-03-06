@@ -27,7 +27,8 @@ import {
   useAuth,
   initiateGoogleSignIn,
   addDocumentNonBlocking,
-  setDocumentNonBlocking
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, orderBy, doc, where, getDoc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ export default function Home() {
       const email = user.email?.toLowerCase();
       const isMasterAdmin = email === 'wilsonintai76@gmail.com';
 
+      // 1. Ensure current user profile exists
       if (profile === null) {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
@@ -99,14 +101,21 @@ export default function Home() {
         }
       }
 
+      // 2. Master Admin Logic: Wilson Profile and Peg 3 Injection (Deduplicated)
       if (isMasterAdmin) {
-        const wilsonUid = 'wilson_staff_placeholder';
-        const wilsonProfileRef = doc(firestore, 'user_profiles', wilsonUid);
-        const wilsonSnap = await getDoc(wilsonProfileRef);
-
-        if (!wilsonSnap.exists()) {
+        // Find or create Wilson's profile specifically
+        const usersRef = collection(firestore, 'user_profiles');
+        const qWilson = query(usersRef, where('email', '==', 'wilson@poliku.edu.my'));
+        const wilsonDocs = await getDocs(qWilson);
+        
+        let wilsonId = 'wilson_staff_placeholder';
+        if (!wilsonDocs.empty) {
+          wilsonId = wilsonDocs.docs[0].id;
+        } else {
+          // Only create placeholder if he hasn't signed in yet
+          const wilsonProfileRef = doc(firestore, 'user_profiles', wilsonId);
           setDocumentNonBlocking(wilsonProfileRef, {
-            id: wilsonUid,
+            id: wilsonId,
             firstName: 'Wilson',
             lastName: 'Poliku',
             email: 'wilson@poliku.edu.my',
@@ -116,19 +125,22 @@ export default function Home() {
           }, { merge: true });
         }
 
-        const peg3KeyId = 'workshop_key_peg_3';
-        const keyRef = doc(firestore, 'keys', peg3KeyId);
-        const keySnap = await getDoc(keyRef);
+        // Search for Key at Peg 3 (index 2) using query to avoid duplicates
+        const keysRef = collection(firestore, 'keys');
+        const qKey = query(keysRef, where('pegIndex', '==', 2));
+        const keyDocs = await getDocs(qKey);
 
-        if (!keySnap.exists()) {
-          setDocumentNonBlocking(keyRef, {
+        if (keyDocs.empty) {
+          // Create only if no key exists at this peg index anywhere in the collection
+          const peg3KeyId = 'workshop_key_peg_3';
+          setDocumentNonBlocking(doc(firestore, 'keys', peg3KeyId), {
             id: peg3KeyId,
             keyIdentifier: 'WS-PEG-03',
             description: 'Workshop',
             location: 'Main Cabinet Slot 3',
             currentStatus: 'checked_out',
             pegIndex: 2,
-            lastAssignedToUserId: wilsonUid,
+            lastAssignedToUserId: wilsonId,
             createdAt: new Date().toISOString()
           }, { merge: true });
 
@@ -139,6 +151,16 @@ export default function Home() {
             userName: user.displayName || 'Admin',
             timestamp: new Date().toISOString()
           });
+        } else {
+          // If a key at Peg 3 exists, ensure it's assigned to Wilson as requested
+          const existingKeyDoc = keyDocs.docs[0];
+          const keyData = existingKeyDoc.data();
+          if (keyData.currentStatus !== 'checked_out' || keyData.lastAssignedToUserId !== wilsonId) {
+            updateDocumentNonBlocking(existingKeyDoc.ref, {
+              currentStatus: 'checked_out',
+              lastAssignedToUserId: wilsonId
+            });
+          }
         }
       }
     }
