@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -9,11 +9,9 @@ import { KeyCard } from '@/components/inventory/KeyCard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { SystemSettings } from '@/components/admin/SystemSettings';
 import { ComplaintManager } from '@/components/admin/ComplaintManager';
-import { TransactionHistory } from '@/components/history/TransactionHistory';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
 import { ReportProblemDialog } from '@/components/profile/ReportProblemDialog';
-import { SmartAssigner } from '@/components/ai/SmartAssigner';
 import { Key, DashboardStats, Transaction, Complaint } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/toaster';
@@ -27,12 +25,10 @@ import {
   useAuth,
   initiateGoogleSignIn,
   addDocumentNonBlocking,
-  setDocumentNonBlocking,
-  updateDocumentNonBlocking
+  setDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, orderBy, doc, where, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { INITIAL_ASSIGNEES } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -145,17 +141,6 @@ export default function Home() {
       pegIndex: k.pegIndex
     })) as Key[];
   }, [keysData]);
-
-  const transactions = useMemo(() => {
-    return (assignmentsData || []).map(a => ({
-      id: a.id,
-      keyId: a.keyId,
-      assigneeId: a.assignedToUserId,
-      checkoutDate: a.checkoutDateTime,
-      returnDate: a.returnDateTime,
-      status: a.status as any
-    })) as Transaction[];
-  }, [assignmentsData]);
 
   const stats = useMemo((): DashboardStats => {
     return {
@@ -283,18 +268,6 @@ export default function Home() {
           </div>
         </TabsContent>
 
-        <TabsContent value="ai" className="mt-0 pt-6">
-          {isStaffOrAdmin ? (
-            <SmartAssigner keys={keys} userRole={userRole} />
-          ) : (
-            <div className="p-10 text-center">
-              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
-              <h3 className="text-lg font-bold">Access Denied</h3>
-              <p className="text-xs text-muted-foreground mt-2">AI Assistant is only available for Staff and Admins.</p>
-            </div>
-          )}
-        </TabsContent>
-
         <TabsContent value="users" className="mt-0">
           {isAdminUser ? (
             <UserManagement />
@@ -366,7 +339,7 @@ export default function Home() {
         </TabsContent>
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
-          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : (isStaffOrAdmin ? 'grid-cols-4' : 'grid-cols-2')} bg-transparent gap-1`}>
+          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-4' : (isStaffOrAdmin ? 'grid-cols-3' : 'grid-cols-2')} bg-transparent gap-1`}>
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
@@ -381,15 +354,6 @@ export default function Home() {
               <KeyIcon size={18} />
               <span className="text-[9px] font-bold uppercase tracking-tight">Keys</span>
             </TabsTrigger>
-            {isStaffOrAdmin && (
-              <TabsTrigger 
-                value="ai" 
-                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                <Sparkles size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">AI</span>
-              </TabsTrigger>
-            )}
             {isAdminUser && (
               <>
                 <TabsTrigger 
