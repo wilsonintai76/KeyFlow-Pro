@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -123,7 +123,8 @@ export default function Home() {
       type: k.description,
       location: k.location,
       status: k.currentStatus as any,
-      currentAssigneeId: k.lastAssignedToUserId
+      currentAssigneeId: k.lastAssignedToUserId,
+      pegIndex: k.pegIndex
     })) as Key[];
   }, [keysData]);
 
@@ -209,7 +210,9 @@ export default function Home() {
         <TabsContent value="dashboard" className="mt-0">
           <KeyStats stats={stats} />
           
-          <HardwareMonitor />
+          <div className="px-6 mb-6">
+            <HardwareMonitor minimalist />
+          </div>
 
           <div className="px-6 mb-6">
             <Card className={`border-none shadow-lg bg-gradient-to-br overflow-hidden ${isStaffOrAdmin ? 'from-primary to-primary/80 text-white' : 'from-slate-200 to-slate-300 text-slate-500'}`}>
@@ -279,6 +282,37 @@ export default function Home() {
           )}
         </TabsContent>
 
+        <TabsContent value="hardware" className="mt-0">
+          {isStaffOrAdmin ? (
+            <div className="space-y-6 pt-6">
+              <div className="px-6">
+                 <h2 className="text-xl font-bold text-primary">Hardware Monitor</h2>
+                 <p className="text-xs text-muted-foreground">Detailed physical state of the cabinet sensors.</p>
+              </div>
+              <HardwareMonitor />
+              <div className="px-6 mb-20">
+                <Card className="border-none shadow-sm rounded-3xl bg-slate-100 p-6">
+                  <h3 className="font-bold text-primary mb-2 flex items-center gap-2 text-sm">
+                    <Cpu size={16} className="text-accent" />
+                    Integration Info
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    This cabinet is connected via ESP32. Peg sensors detect physical key presence through microswitches connected to GPIO pins.
+                  </p>
+                  <Button variant="link" className="text-[10px] p-0 h-auto mt-2 font-bold" onClick={() => toast({ title: "Developer Note", description: "Firmware code is located in docs/esp32_firmware.ino" })}>
+                    VIEW FIRMWARE DOCUMENTATION
+                  </Button>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="p-10 text-center">
+              <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
+              <h3 className="text-lg font-bold">Access Denied</h3>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="users" className="mt-0">
           {isAdminUser ? (
             <UserManagement />
@@ -286,7 +320,6 @@ export default function Home() {
             <div className="p-10 text-center">
               <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
               <h3 className="text-lg font-bold">Access Denied</h3>
-              <p className="text-sm text-muted-foreground">Only administrators can access user management.</p>
             </div>
           )}
         </TabsContent>
@@ -298,7 +331,6 @@ export default function Home() {
             <div className="p-10 text-center">
               <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
               <h3 className="text-lg font-bold">Access Denied</h3>
-              <p className="text-sm text-muted-foreground">Only administrators can access system settings.</p>
             </div>
           )}
         </TabsContent>
@@ -326,9 +358,6 @@ export default function Home() {
                 <LogOut size={18} />
                 Sign Out
               </Button>
-              <div className="text-center pt-4">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Automatic sign-out enabled for security</p>
-              </div>
            </div>
         </TabsContent>
 
@@ -350,11 +379,11 @@ export default function Home() {
             </TabsTrigger>
             {isStaffOrAdmin && (
               <TabsTrigger 
-                value="history" 
+                value="hardware" 
                 className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
               >
-                <History size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">Logs</span>
+                <Cpu size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">HW</span>
               </TabsTrigger>
             )}
             {isAdminUser && (

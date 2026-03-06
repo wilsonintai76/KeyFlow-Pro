@@ -8,7 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-export function HardwareMonitor() {
+interface HardwareMonitorProps {
+  minimalist?: boolean;
+}
+
+export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
   const firestore = useFirestore();
 
   const statusDocRef = useMemoFirebase(() => {
@@ -24,8 +28,39 @@ export function HardwareMonitor() {
   const isDoorOpen = status?.doorState === 'open';
   const pegStates = status?.pegStates || {};
 
+  if (minimalist) {
+    return (
+      <Card className="border-none shadow-sm overflow-hidden rounded-2xl bg-white">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isDoorOpen ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+              {isDoorOpen ? <DoorOpen size={20} /> : <DoorClosed size={20} />}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-primary">
+                {isDoorOpen ? 'Cabinet Open' : 'Cabinet Locked'}
+              </p>
+              <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold mt-1 ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </Badge>
+            </div>
+          </div>
+          <div className="text-right">
+             <div className="flex items-center gap-1 justify-end text-[10px] text-muted-foreground">
+                <Wifi size={10} />
+                {status?.wifiSignal || 0}%
+             </div>
+             <p className="text-[10px] font-medium mt-1">
+                {status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
+             </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="px-6 mb-4 space-y-3">
+    <div className="px-6 space-y-3">
       <Card className="border-none shadow-sm overflow-hidden rounded-2xl bg-white">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
