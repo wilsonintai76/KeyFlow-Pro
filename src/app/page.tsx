@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, History } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -73,19 +73,26 @@ export default function Home() {
 
   useEffect(() => {
     async function checkAndInitialize() {
-      if (!user || !firestore || isProfileLoading || profileError || profile !== null) return;
-      const snap = await getDoc(profileDocRef!);
-      if (!snap.exists()) {
-        const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
-        const newProfile = {
-          id: user.uid,
-          firstName: user.displayName?.split(' ')[0] || 'User',
-          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-          email: user.email || '',
-          role: isMasterAdmin ? 'admin' : 'guest',
-          createdAt: new Date().toISOString()
-        };
-        setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
+      // Defensive onboarding logic: only initialize if user is signed in, 
+      // the document explicitly does not exist, and there's no loading/error state.
+      if (!user || !firestore || isProfileLoading || profileError) return;
+      
+      // We only want to run this if we are SURE the profile is missing.
+      // useDoc data being null while not loading is a strong indicator.
+      if (profile === null) {
+        const snap = await getDoc(profileDocRef!);
+        if (!snap.exists()) {
+          const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
+          const newProfile = {
+            id: user.uid,
+            firstName: user.displayName?.split(' ')[0] || 'User',
+            lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+            email: user.email || '',
+            role: isMasterAdmin ? 'admin' : 'guest',
+            createdAt: new Date().toISOString()
+          };
+          setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
+        }
       }
     }
     checkAndInitialize();
@@ -141,7 +148,6 @@ export default function Home() {
       status: 'pending'
     });
 
-    // Log the unlock action
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
       message: 'Cabinet manually unlocked from dashboard',

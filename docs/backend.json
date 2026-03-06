@@ -183,77 +183,47 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/user_profiles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profile data including roles."
-        }
+    "/user_profiles/{userId}": {
+      "schema": {
+        "$ref": "#/backend/entities/UserProfile"
       },
-      {
-        "path": "/hardware_triggers/{triggerId}",
-        "definition": {
-          "entityName": "HardwareTrigger",
-          "schema": {
-            "$ref": "#/backend/entities/HardwareTrigger"
-          },
-          "description": "Collection monitored by ESP32 to trigger solenoids."
-        }
+      "description": "Stores individual user profile data including roles."
+    },
+    "/hardware_triggers/{triggerId}": {
+      "schema": {
+        "$ref": "#/backend/entities/HardwareTrigger"
       },
-      {
-        "path": "/cabinet_status/{statusId}",
-        "definition": {
-          "entityName": "CabinetStatus",
-          "schema": {
-            "$ref": "#/backend/entities/CabinetStatus"
-          },
-          "description": "Stores live status of the physical hardware cabinet."
-        }
+      "description": "Collection monitored by ESP32 to trigger solenoids."
+    },
+    "/cabinet_status/{statusId}": {
+      "schema": {
+        "$ref": "#/backend/entities/CabinetStatus"
       },
-      {
-        "path": "/keys/{keyId}",
-        "definition": {
-          "entityName": "Key",
-          "schema": {
-            "$ref": "#/backend/entities/Key"
-          },
-          "description": "Main collection for managing the inventory of physical keys."
-        }
+      "description": "Stores live status of the physical hardware cabinet."
+    },
+    "/keys/{keyId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Key"
       },
-      {
-        "path": "/settings/{settingId}",
-        "definition": {
-          "entityName": "GlobalSettings",
-          "schema": {
-            "$ref": "#/backend/entities/GlobalSettings"
-          },
-          "description": "Global configuration documents."
-        }
+      "description": "Main collection for managing the inventory of physical keys."
+    },
+    "/settings/{settingId}": {
+      "schema": {
+        "$ref": "#/backend/entities/GlobalSettings"
       },
-      {
-        "path": "/complaints/{complaintId}",
-        "definition": {
-          "entityName": "Complaint",
-          "schema": {
-            "$ref": "#/backend/entities/Complaint"
-          },
-          "description": "User reported issues and complaints."
-        }
+      "description": "Global configuration documents."
+    },
+    "/complaints/{complaintId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Complaint"
       },
-      {
-        "path": "/system_logs/{logId}",
-        "definition": {
-          "entityName": "SystemLog",
-          "schema": {
-            "$ref": "#/backend/entities/SystemLog"
-          },
-          "description": "Audit logs for tracking system-wide activity."
-        }
-      }
-    ]
+      "description": "User reported issues and complaints."
+    },
+    "/system_logs/{logId}": {
+      "schema": {
+        "$ref": "#/backend/entities/SystemLog"
+      },
+      "description": "Audit logs for tracking system-wide activity."
+    }
   }
 }
