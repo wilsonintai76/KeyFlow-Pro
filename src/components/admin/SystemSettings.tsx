@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Clock, Save, Loader2, Info, Tag, Cpu, RefreshCw, Activity, LayoutGrid } from 'lucide-react';
+import { Settings, Clock, Save, Loader2, Tag, Cpu, RefreshCw, Activity, LayoutGrid, Link as LinkIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
@@ -20,6 +20,7 @@ export function SystemSettings() {
   const { toast } = useToast();
   const [duration, setDuration] = useState('24');
   const [pegCount, setPegCount] = useState('10');
+  const [firmwareUrl, setFirmwareUrl] = useState('');
   const [categoriesText, setCategoriesText] = useState('Workshop, Room, Machine');
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingFirmware, setIsUpdatingFirmware] = useState(false);
@@ -47,6 +48,9 @@ export function SystemSettings() {
       }
       if (settings.categories && Array.isArray(settings.categories)) {
         setCategoriesText(settings.categories.join(', '));
+      }
+      if (settings.lastFirmwareUrl) {
+        setFirmwareUrl(settings.lastFirmwareUrl);
       }
     }
   }, [settings]);
@@ -79,6 +83,7 @@ export function SystemSettings() {
       maxBorrowDurationHours: numericDuration,
       pegCount: numericPegCount,
       categories: categoriesArray,
+      lastFirmwareUrl: firmwareUrl,
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
@@ -93,10 +98,21 @@ export function SystemSettings() {
 
   const handleFirmwareUpdate = () => {
     if (!firestore || !user) return;
+    
+    if (!firmwareUrl) {
+      toast({
+        variant: "destructive",
+        title: "URL Required",
+        description: "Please provide a firmware binary URL before updating.",
+      });
+      return;
+    }
+
     setIsUpdatingFirmware(true);
 
     addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
       action: 'FIRMWARE_UPDATE',
+      payload: firmwareUrl,
       timestamp: new Date().toISOString(),
       userId: user.uid,
       status: 'pending'
@@ -104,7 +120,7 @@ export function SystemSettings() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: 'Firmware update signal pushed to ESP32',
+      message: `OTA Update triggered with binary: ${firmwareUrl.split('/').pop()}`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -113,8 +129,8 @@ export function SystemSettings() {
     setTimeout(() => {
       setIsUpdatingFirmware(false);
       toast({
-        title: "Update Pushed",
-        description: "The ESP32 has been signaled to perform a firmware check.",
+        title: "Signal Dispatched",
+        description: "The ESP32 has been signaled to fetch the new firmware binary.",
       });
     }, 1000);
   };
@@ -137,7 +153,7 @@ export function SystemSettings() {
             <Cpu size={18} className="text-accent" />
             <CardTitle className="text-base font-bold">Hardware Maintenance</CardTitle>
           </div>
-          <CardDescription className="text-xs">Monitor and update the physical ESP32 cabinet.</CardDescription>
+          <CardDescription className="text-xs">Monitor and push Over-The-Air updates.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
@@ -156,6 +172,21 @@ export function SystemSettings() {
             </div>
           </div>
 
+          <div className="space-y-3">
+            <Label htmlFor="firmwareUrl" className="text-xs font-bold uppercase text-muted-foreground">Firmware Binary URL (.bin)</Label>
+            <div className="relative">
+              <LinkIcon className="absolute left-3 top-3 text-muted-foreground" size={16} />
+              <Input 
+                id="firmwareUrl"
+                placeholder="https://storage.googleapis.com/..."
+                value={firmwareUrl}
+                onChange={(e) => setFirmwareUrl(e.target.value)}
+                className="pl-10 h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent text-xs"
+              />
+            </div>
+            <p className="text-[9px] text-muted-foreground italic px-1">Host your compiled binary on Firebase Storage or a public server.</p>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium px-1">
               <Activity size={12} className="text-accent" />
@@ -163,7 +194,7 @@ export function SystemSettings() {
             </div>
             <Button 
               onClick={handleFirmwareUpdate}
-              disabled={isUpdatingFirmware || !isOnline}
+              disabled={isUpdatingFirmware || !isOnline || !firmwareUrl}
               variant="outline"
               className="w-full h-11 rounded-xl border-accent/30 text-accent hover:bg-accent/5 font-bold gap-2"
             >
@@ -197,7 +228,6 @@ export function SystemSettings() {
               />
               <span className="text-sm font-medium text-muted-foreground">Slots</span>
             </div>
-            <p className="text-[10px] text-muted-foreground px-1">Changing this will update the dashboard visual map and tell the ESP32 how many pins to scan.</p>
           </div>
         </CardContent>
       </Card>

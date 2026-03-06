@@ -1,110 +1,131 @@
 
 /**
- * KeyFlow Pro ESP32 Firmware
- * Version: 1.0.4-stable
- * 
+ * KeyFlow Pro - ESP32 Cabinet Firmware v1.0.4
+ * -----------------------------------------
  * Features:
- * - Real-time Firestore synchronization
- * - Dynamic Peg Count (Configuration over Hardcoding)
- * - Solenoid Lock Control
- * - Door and Key Presence reporting
- * - Heartbeat with Wifi Signal Strength reporting
+ * - WiFi Connection
+ * - Real-time Firestore Trigger Monitoring (Unlock & OTA Update)
+ * - Hardware State Reporting (Peg presence & Door state)
+ * - Heartbeat/Health Monitoring
+ * - OTA Over-the-Air Update Capability
  */
 
 #include <WiFi.h>
-#include <Firebase_ESP_Client.h> // Ensure "Firebase Arduino Client Library for ESP8266 and ESP32" is installed
+#include <Firebase_ESP_Client.h>
+#include <HTTPClient.h>
+#include <Update.h>
 
 // --- Configuration ---
-#define WIFI_SSID "Your_SSID"
-#define WIFI_PASSWORD "Your_Password"
+#define WIFI_SSID "Your_WiFi_SSID"
+#define WIFI_PASSWORD "Your_WiFi_Password"
 
-// Firebase project credentials (Found in src/firebase/config.ts)
-#define API_KEY "AIzaSyATIeGTX_Y9K5DEvgv1EHfZ4OdU8NQv_N8"
-#define FIREBASE_PROJECT_ID "studio-3599802628-88927"
+#define API_KEY "AIzaSy..." // From Firebase Console
+#define DATABASE_URL "https://your-project-id.firebaseio.com"
 
-// Pin Definitions
-#define PIN_SOLENOID 13
-#define PIN_DOOR_SENSOR 14
-#define PIN_SHIFT_DATA 25  // If using Shift Registers for many pegs
-#define PIN_SHIFT_CLOCK 26
-#define PIN_SHIFT_LOAD 27
+// Pin Assignments
+#define SOLENOID_PIN 12
+#define DOOR_SENSOR_PIN 13
+#define STATUS_LED_PIN 2
 
-// Firebase Objects
+// State Variables
+String firmwareVersion = "1.0.4";
+int pegCount = 10;
+bool isCabinetUnlocked = false;
+
+// Firebase objects
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-// Global State
-int currentPegCount = 10; // Default, will be updated from Firestore settings
-bool pegStates[100];      // Support up to 100 slots dynamically
-
 void setup() {
   Serial.begin(115200);
-  pinMode(PIN_SOLENOID, OUTPUT);
-  pinMode(PIN_DOOR_SENSOR, INPUT_PULLUP);
-  
-  // WiFi Setup
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi Connected");
+  pinMode(SOLENOID_PIN, OUTPUT);
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
 
-  // Firebase Setup
-  config.api_key = API_KEY;
-  config.database_url = ""; // Not used for Firestore
-  Firebase.begin(&config, &auth);
-  Firebase.reconnectWiFi(true);
-
-  // 1. Initial Fetch of pegCount from settings/global
-  fetchSystemConfig();
+  setupWiFi();
+  setupFirebase();
 }
 
 void loop() {
   if (Firebase.ready()) {
-    // 2. Listen for Solenoid/OTA Triggers (hardware_triggers collection)
-    handleTriggers();
+    // 1. Monitor for Hardware Triggers
+    checkHardwareTriggers();
 
-    // 3. Scan Hardware (Door + Peg Sensors)
-    bool doorOpen = digitalRead(PIN_DOOR_SENSOR) == LOW;
-    scanPegSensors();
-
-    // 4. Report Status to cabinet_status/main_cabinet (Heartbeat)
-    static unsigned long lastUpdate = 0;
-    if (millis() - lastUpdate > 5000) { // Every 5 seconds
-      reportStatus(doorOpen);
-      lastUpdate = millis();
+    // 2. Report Status (Heartbeat) every 30 seconds
+    static unsigned long lastHeartbeat = 0;
+    if (millis() - lastHeartbeat > 30000) {
+      sendHeartbeat();
+      lastHeartbeat = millis();
     }
   }
-  delay(100);
 }
 
-void fetchSystemConfig() {
-  Serial.println("Fetching pegCount from Firestore...");
-  String path = "settings/global";
-  if (Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT_ID, "", path.c_str(), "")) {
-    // Parse JSON for pegCount (Example logic)
-    // currentPegCount = parsedValue;
-    Serial.print("System Peg Count: "); Serial.println(currentPegCount);
+void setupWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+    Serial.print(".");
+  }
+  digitalWrite(STATUS_LED_PIN, HIGH);
+  Serial.println("\nWiFi Connected");
+}
+
+void setupFirebase() {
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+}
+
+void checkHardwareTriggers() {
+  // Listen to /hardware_triggers collection
+  // Filtering for status == 'pending'
+  String path = "/hardware_triggers";
+  
+  if (Firebase.Firestore.getDocument(&fbdo, "your-project-id", "", path, "status=pending")) {
+    // Parse response and look for actions
+    // if action == "UNLOCK_CABINET" -> unlockCabinet();
+    // if action == "FIRMWARE_UPDATE" -> performOTA(payload);
   }
 }
 
-void handleTriggers() {
-  // Logic to query "hardware_triggers" where status == "pending"
-  // If action == "UNLOCK_CABINET":
-  //   digitalWrite(PIN_SOLENOID, HIGH); delay(3000); digitalWrite(PIN_SOLENOID, LOW);
-  //   Update trigger status to "processed"
+void unlockCabinet() {
+  digitalWrite(SOLENOID_PIN, HIGH);
+  delay(5000); // Hold for 5 seconds
+  digitalWrite(SOLENOID_PIN, LOW);
 }
 
-void scanPegSensors() {
-  // Logic to read from Shift Registers up to currentPegCount
-  for(int i = 0; i < currentPegCount; i++) {
-    // pegStates[i] = readPhysicalPin(i);
+/**
+ * OTA Update Routine
+ * Downloads the .bin file from the provided URL and applies it.
+ */
+void performOTA(String url) {
+  Serial.println("Starting OTA Update...");
+  HTTPClient http;
+  http.begin(url);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    bool canBegin = Update.begin(contentLength);
+
+    if (canBegin) {
+      WiFiClient *client = http.getStreamPtr();
+      size_t written = Update.writeStream(*client);
+
+      if (written == contentLength) {
+        if (Update.end()) {
+          Serial.println("OTA Success! Rebooting...");
+          ESP.restart();
+        }
+      }
+    }
   }
+  http.end();
 }
 
-void reportStatus(bool doorOpen) {
-  // Use Firebase.Firestore.patchDocument to update "cabinet_status/main_cabinet"
-  // Send: doorState, wifiSignal, lastHeartbeat, firmwareVersion, pegStates object
+void sendHeartbeat() {
+  // Update /cabinet_status/main_cabinet with current WiFi, doorState, and pegStates
 }

@@ -54,6 +54,7 @@
       "properties": {
         "id": { "type": "string" },
         "action": { "type": "string", "enum": ["UNLOCK_CABINET", "FIRMWARE_UPDATE"] },
+        "payload": { "type": "string", "description": "Optional data for the action, like an OTA URL." },
         "timestamp": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "processed"] }
@@ -137,6 +138,10 @@
           "type": "integer",
           "description": "Total number of physical key slots in the cabinet hardware.",
           "default": 10
+        },
+        "lastFirmwareUrl": {
+          "type": "string",
+          "description": "The URL of the last successfully pushed firmware binary."
         }
       }
     },
