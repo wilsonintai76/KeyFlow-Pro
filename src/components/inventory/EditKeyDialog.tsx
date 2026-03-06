@@ -57,8 +57,19 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
     e.preventDefault();
     if (!name || !location || !firestore) return;
 
-    const keyRef = doc(firestore, 'keys', keyData.id);
     const numericPegIndex = pegIndex ? parseInt(pegIndex) - 1 : null;
+    
+    // Strict compliance check with Admin settings
+    if (numericPegIndex !== null && (numericPegIndex < 0 || numericPegIndex >= pegCount)) {
+      toast({
+        variant: "destructive",
+        title: "Configuration Violation",
+        description: `Selected slot (#${pegIndex}) exceeds the ${pegCount} slots configured in Admin Settings.`,
+      });
+      return;
+    }
+
+    const keyRef = doc(firestore, 'keys', keyData.id);
     
     updateDocumentNonBlocking(keyRef, {
       keyIdentifier: name,
@@ -69,7 +80,7 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
     });
 
     toast({
-      title: "Success",
+      title: "Update Success",
       description: `${name} has been updated.`,
     });
 

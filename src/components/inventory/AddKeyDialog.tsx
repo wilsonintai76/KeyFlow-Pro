@@ -52,8 +52,19 @@ export function AddKeyDialog() {
     e.preventDefault();
     if (!name || !location || !firestore) return;
 
-    const keysCollection = collection(firestore, 'keys');
     const numericPegIndex = pegIndex ? parseInt(pegIndex) - 1 : null;
+    
+    // Strict compliance check with Admin settings
+    if (numericPegIndex !== null && (numericPegIndex < 0 || numericPegIndex >= pegCount)) {
+      toast({
+        variant: "destructive",
+        title: "Configuration Violation",
+        description: `Selected slot (#${pegIndex}) exceeds the ${pegCount} slots configured in Admin Settings.`,
+      });
+      return;
+    }
+
+    const keysCollection = collection(firestore, 'keys');
     
     addDocumentNonBlocking(keysCollection, {
       keyIdentifier: name,
@@ -65,7 +76,7 @@ export function AddKeyDialog() {
     });
 
     toast({
-      title: "Success",
+      title: "Key Registered",
       description: `${name} has been added to the inventory.`,
     });
 
@@ -117,7 +128,7 @@ export function AddKeyDialog() {
                 </Select>
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="pegIndex" className="font-bold text-xs uppercase text-muted-foreground">Peg Slot (1-{pegCount})</Label>
+                <Label htmlFor="pegIndex" className="font-bold text-xs uppercase text-muted-foreground">Slot (1-{pegCount})</Label>
                 <Input
                   id="pegIndex"
                   type="number"
