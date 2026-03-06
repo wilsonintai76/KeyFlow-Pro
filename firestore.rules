@@ -66,11 +66,19 @@ service cloud.firestore {
     }
 
     /**
-     * @description Hardware triggers collection. Only staff and admins can trigger cabinet unlock.
+     * @description Hardware triggers collection. Staff can trigger, ESP32 (signed in as hardware user or via wide rules) reads.
      */
     match /hardware_triggers/{triggerId} {
-      allow create: if isStaff();
-      allow get, list, update, delete: if isStaff();
+      allow read, create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Cabinet status reported by ESP32.
+     */
+    match /cabinet_status/{statusId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Hardware uses an auth account
     }
 
     /**

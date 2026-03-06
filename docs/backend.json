@@ -59,6 +59,17 @@
         "status": { "type": "string", "enum": ["pending", "processed"] }
       }
     },
+    "CabinetStatus": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CabinetStatus",
+      "type": "object",
+      "description": "Live state of the physical key cabinet reported by ESP32.",
+      "properties": {
+        "doorState": { "type": "string", "enum": ["open", "closed"] },
+        "lastHeartbeat": { "type": "string", "format": "date-time" },
+        "wifiSignal": { "type": "integer" }
+      }
+    },
     "Key": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Key",
@@ -142,6 +153,16 @@
             "$ref": "#/backend/entities/HardwareTrigger"
           },
           "description": "Collection monitored by ESP32 to trigger solenoids."
+        }
+      },
+      {
+        "path": "/cabinet_status/{statusId}",
+        "definition": {
+          "entityName": "CabinetStatus",
+          "schema": {
+            "$ref": "#/backend/entities/CabinetStatus"
+          },
+          "description": "Stores live status of the physical hardware cabinet."
         }
       },
       {

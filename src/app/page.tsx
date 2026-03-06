@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
+import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
 import { KeyCard } from '@/components/inventory/KeyCard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { SystemSettings } from '@/components/admin/SystemSettings';
@@ -208,6 +209,8 @@ export default function Home() {
         <TabsContent value="dashboard" className="mt-0">
           <KeyStats stats={stats} />
           
+          <HardwareMonitor />
+
           <div className="px-6 mb-6">
             <Card className={`border-none shadow-lg bg-gradient-to-br overflow-hidden ${isStaffOrAdmin ? 'from-primary to-primary/80 text-white' : 'from-slate-200 to-slate-300 text-slate-500'}`}>
               <CardContent className="p-5 flex items-center justify-between">
