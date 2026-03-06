@@ -29,7 +29,7 @@ import {
   addDocumentNonBlocking,
   setDocumentNonBlocking
 } from '@/firebase';
-import { collection, query, orderBy, doc, where, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where, getDoc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -75,12 +75,13 @@ export default function Home() {
     async function checkAndInitialize() {
       if (!user || !firestore || isProfileLoading || profileError) return;
       
+      const email = user.email?.toLowerCase();
+      const isMasterAdmin = email === 'wilsonintai76@gmail.com';
+
+      // 1. Initial Profile Setup
       if (profile === null) {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
-          const email = user.email?.toLowerCase();
-          // Master Admin
-          const isMasterAdmin = email === 'wilsonintai76@gmail.com';
           // Trusted Staff / Key Borrower
           const isTrustedStaff = email === 'wilson@poliku.edu.my';
           
@@ -97,6 +98,42 @@ export default function Home() {
             createdAt: new Date().toISOString()
           };
           setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
+        }
+      }
+
+      // 2. Data Injection: Seed Peg 3 Key assigned to Wilson (triggered by Master Admin)
+      if (isMasterAdmin) {
+        const peg3KeyId = 'workshop_key_peg_3';
+        const keyRef = doc(firestore, 'keys', peg3KeyId);
+        const keySnap = await getDoc(keyRef);
+
+        if (!keySnap.exists()) {
+          // Try to find Wilson's UID if he already logged in
+          const wilsonQuery = query(collection(firestore, 'user_profiles'), where('email', '==', 'wilson@poliku.edu.my'));
+          const wilsonSnap = await getDocs(wilsonQuery);
+          let wilsonUid = 'wilson_staff_placeholder';
+          if (!wilsonSnap.empty) {
+            wilsonUid = wilsonSnap.docs[0].id;
+          }
+
+          setDocumentNonBlocking(keyRef, {
+            id: peg3KeyId,
+            keyIdentifier: 'WS-PEG-03',
+            description: 'Workshop',
+            location: 'Main Cabinet Slot 3',
+            currentStatus: 'checked_out',
+            pegIndex: 2, // 0-indexed Peg 3
+            lastAssignedToUserId: wilsonUid,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+
+          addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+            type: 'INVENTORY',
+            message: 'Bootstrap: Injected Workshop Key at Peg 3 assigned to Wilson',
+            userId: user.uid,
+            userName: user.displayName || 'Admin',
+            timestamp: new Date().toISOString()
+          });
         }
       }
     }
