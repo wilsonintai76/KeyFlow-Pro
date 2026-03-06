@@ -52,7 +52,7 @@ export default function Home() {
           title: "Session Expired",
           description: "You have been signed out due to inactivity.",
         });
-      }, 15 * 60 * 1000); // 15 minute session for active staff
+      }, 15 * 60 * 1000);
     };
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handleActivity = () => resetTimer();
@@ -78,11 +78,9 @@ export default function Home() {
       const email = user.email?.toLowerCase();
       const isMasterAdmin = email === 'wilsonintai76@gmail.com';
 
-      // 1. Initial Profile Setup
       if (profile === null) {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
-          // Trusted Staff / Key Borrower
           const isTrustedStaff = email === 'wilson@poliku.edu.my';
           
           let role = 'guest';
@@ -101,28 +99,35 @@ export default function Home() {
         }
       }
 
-      // 2. Data Injection: Seed Peg 3 Key assigned to Wilson (triggered by Master Admin)
       if (isMasterAdmin) {
+        const wilsonUid = 'wilson_staff_placeholder';
+        const wilsonProfileRef = doc(firestore, 'user_profiles', wilsonUid);
+        const wilsonSnap = await getDoc(wilsonProfileRef);
+
+        if (!wilsonSnap.exists()) {
+          setDocumentNonBlocking(wilsonProfileRef, {
+            id: wilsonUid,
+            firstName: 'Wilson',
+            lastName: 'Poliku',
+            email: 'wilson@poliku.edu.my',
+            phoneNumber: '+60 12-345 6789',
+            role: 'staff',
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
         const peg3KeyId = 'workshop_key_peg_3';
         const keyRef = doc(firestore, 'keys', peg3KeyId);
         const keySnap = await getDoc(keyRef);
 
         if (!keySnap.exists()) {
-          // Try to find Wilson's UID if he already logged in
-          const wilsonQuery = query(collection(firestore, 'user_profiles'), where('email', '==', 'wilson@poliku.edu.my'));
-          const wilsonSnap = await getDocs(wilsonQuery);
-          let wilsonUid = 'wilson_staff_placeholder';
-          if (!wilsonSnap.empty) {
-            wilsonUid = wilsonSnap.docs[0].id;
-          }
-
           setDocumentNonBlocking(keyRef, {
             id: peg3KeyId,
             keyIdentifier: 'WS-PEG-03',
             description: 'Workshop',
             location: 'Main Cabinet Slot 3',
             currentStatus: 'checked_out',
-            pegIndex: 2, // 0-indexed Peg 3
+            pegIndex: 2,
             lastAssignedToUserId: wilsonUid,
             createdAt: new Date().toISOString()
           }, { merge: true });
@@ -350,7 +355,9 @@ export default function Home() {
                   </Badge>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-primary">{user.displayName || 'Staff Member'}</h3>
+                  <h3 className="text-xl font-bold text-primary">
+                    {profile?.firstName ? `${profile.firstName} ${profile.lastName}` : (user.displayName || 'Staff Member')}
+                  </h3>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>

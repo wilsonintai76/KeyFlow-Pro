@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserCog, Loader2 } from 'lucide-react';
+import { Search, UserCog, Loader2, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function UserManagement() {
@@ -27,7 +27,8 @@ export function UserManagement() {
   const filteredUsers = (users || []).filter(u => 
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
     u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.lastName?.toLowerCase().includes(search.toLowerCase())
+    u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.phoneNumber?.includes(search)
   );
 
   const handleRoleChange = (userId: string, userName: string, oldRole: string, newRole: string) => {
@@ -35,7 +36,6 @@ export function UserManagement() {
     const userRef = doc(firestore, 'user_profiles', userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     
-    // Log the action
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'USER_MGMT',
       message: `Role changed for ${userName} from ${oldRole} to ${newRole}`,
@@ -62,14 +62,14 @@ export function UserManagement() {
     <div className="px-6 py-4 space-y-4 mb-20">
       <div className="space-y-1">
         <h2 className="text-xl font-bold text-primary">User Management</h2>
-        <p className="text-xs text-muted-foreground">Manage roles and permissions for all registered users.</p>
+        <p className="text-xs text-muted-foreground">Manage roles and contact details for all staff.</p>
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
         <Input 
           className="pl-9 bg-white border-none shadow-sm h-11 rounded-xl" 
-          placeholder="Search users..." 
+          placeholder="Search by name, email or phone..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -90,13 +90,24 @@ export function UserManagement() {
               <Card key={userProfile.id} className="border-none shadow-sm overflow-hidden rounded-2xl">
                 <CardContent className="p-4 flex flex-col gap-3">
                   <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <h3 className="font-bold text-primary leading-tight">
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <h3 className="font-bold text-primary leading-tight truncate">
                         {userProfile.firstName} {userProfile.lastName}
                       </h3>
-                      <span className="text-[10px] text-muted-foreground">{userProfile.email}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <Mail size={10} className="text-accent shrink-0" />
+                          <span className="truncate">{userProfile.email}</span>
+                        </div>
+                        {userProfile.phoneNumber && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <Phone size={10} className="text-accent shrink-0" />
+                            <span>{userProfile.phoneNumber}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <Badge className={`${getRoleBadgeColor(userProfile.role)} text-[9px] uppercase font-bold py-0 h-5`}>
+                    <Badge className={`${getRoleBadgeColor(userProfile.role)} text-[9px] uppercase font-bold py-0 h-5 shrink-0`}>
                       {userProfile.role}
                     </Badge>
                   </div>
@@ -104,7 +115,7 @@ export function UserManagement() {
                   <div className="pt-3 border-t flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase font-bold">
                       <UserCog size={12} className="text-accent" />
-                      Assign Role
+                      Role
                     </div>
                     <Select 
                       value={userProfile.role} 

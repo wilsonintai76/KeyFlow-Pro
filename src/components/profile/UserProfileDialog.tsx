@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Phone, Save, Loader2 } from 'lucide-react';
+import { Phone, Save, Loader2, User } from 'lucide-react';
 import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -18,10 +18,12 @@ interface UserProfileDialogProps {
 export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Memoize the document reference to satisfy hook requirements
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
     return doc(firestore, 'user_profiles', userId);
@@ -30,8 +32,10 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const { data: profile, isLoading } = useDoc<any>(userDocRef);
 
   useEffect(() => {
-    if (profile?.phoneNumber) {
-      setPhoneNumber(profile.phoneNumber);
+    if (profile) {
+      if (profile.firstName) setFirstName(profile.firstName);
+      if (profile.lastName) setLastName(profile.lastName);
+      if (profile.phoneNumber) setPhoneNumber(profile.phoneNumber);
     }
   }, [profile]);
 
@@ -41,7 +45,9 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
 
     setDocumentNonBlocking(userDocRef, {
       id: userId,
-      phoneNumber: phoneNumber,
+      firstName,
+      lastName,
+      phoneNumber,
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
@@ -49,7 +55,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
       setIsSaving(false);
       toast({
         title: "Profile Updated",
-        description: "Your contact information has been saved successfully.",
+        description: "Your name and contact information have been saved successfully.",
       });
     }, 500);
   };
@@ -68,22 +74,43 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
     <Card className="border shadow-sm overflow-hidden rounded-3xl">
       <CardHeader className="bg-slate-50 border-b pb-4">
         <div className="flex items-center gap-2 text-primary">
-          <Phone size={18} className="text-accent" />
-          <CardTitle className="text-base font-bold">Contact Details</CardTitle>
+          <User size={18} className="text-accent" />
+          <CardTitle className="text-base font-bold">Identity & Contact</CardTitle>
         </div>
-        <CardDescription className="text-xs">Update your profile information.</CardDescription>
+        <CardDescription className="text-xs">Update how you appear in the system.</CardDescription>
       </CardHeader>
       <CardContent className="p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName" className="text-xs font-bold uppercase text-muted-foreground">First Name</Label>
+            <Input 
+              id="firstName" 
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName" className="text-xs font-bold uppercase text-muted-foreground">Last Name</Label>
+            <Input 
+              id="lastName" 
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
+            />
+          </div>
+        </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
+          <Label htmlFor="phone" className="text-xs font-bold uppercase text-muted-foreground">Phone Number</Label>
           <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input 
               id="phone" 
               type="tel"
-              placeholder="+1 (555) 000-0000" 
+              placeholder="+60 12-345 6789" 
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
+              className="bg-slate-50 border-slate-100 h-11 pl-10 focus-visible:ring-accent"
             />
           </div>
         </div>
