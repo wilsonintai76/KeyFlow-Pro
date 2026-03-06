@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, History, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon, Cpu, MessageSquareWarning, Sparkles } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -13,6 +13,7 @@ import { TransactionHistory } from '@/components/history/TransactionHistory';
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
 import { ReportProblemDialog } from '@/components/profile/ReportProblemDialog';
+import { SmartAssigner } from '@/components/ai/SmartAssigner';
 import { Key, DashboardStats, Transaction, Complaint } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/toaster';
@@ -82,16 +83,11 @@ export default function Home() {
 
   /**
    * Defensive Profile Onboarding
-   * We only attempt to create a profile if we are 100% sure the document 
-   * does not already exist in Firestore. This prevents permission errors
-   * when an existing 'staff' user signs in and the app mistakenly tries 
-   * to demote them to 'guest'.
    */
   useEffect(() => {
     async function checkAndInitialize() {
       if (!user || !firestore || isProfileLoading || profileError || profile !== null) return;
 
-      // Double-check with a direct getDoc call to be absolutely sure
       const snap = await getDoc(profileDocRef!);
       if (!snap.exists()) {
         const isMasterAdmin = user.email === 'wilsonintai76@gmail.com';
@@ -105,8 +101,6 @@ export default function Home() {
           createdAt: new Date().toISOString()
         };
         
-        // We use setDocumentNonBlocking. Since snap.exists() was false, 
-        // the Security Rules for 'create' will apply.
         setDocumentNonBlocking(profileDocRef!, newProfile, { merge: true });
       }
     }
@@ -129,7 +123,6 @@ export default function Home() {
     return query(collection(firestore, 'assignments'), orderBy('checkoutDateTime', 'desc'));
   }, [firestore, user?.uid, isStaffOrAdmin]);
 
-  // Notification query for Admins (Pending Complaints)
   const pendingComplaintsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isAdminUser) return null;
     return query(collection(firestore, 'complaints'), where('status', '==', 'pending'));
@@ -290,57 +283,21 @@ export default function Home() {
           </div>
         </TabsContent>
 
-        <TabsContent value="users" className="mt-0">
-          {isAdminUser ? (
-            <UserManagement />
+        <TabsContent value="ai" className="mt-0 pt-6">
+          {isStaffOrAdmin ? (
+            <SmartAssigner keys={keys} userRole={userRole} />
           ) : (
             <div className="p-10 text-center">
               <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
               <h3 className="text-lg font-bold">Access Denied</h3>
+              <p className="text-xs text-muted-foreground mt-2">AI Assistant is only available for Staff and Admins.</p>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="mt-0">
-          <div className="px-6 pt-6 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-primary">Activity Logs</h2>
-          </div>
-          {isAssignmentsLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
-          ) : !isStaffOrAdmin ? (
-            <div className="p-10 text-center space-y-4">
-              <ShieldAlert className="mx-auto text-rose-500" size={48} />
-              <h3 className="font-bold text-lg">Staff Access Required</h3>
-              <p className="text-sm text-muted-foreground">Log history is restricted to staff members.</p>
-            </div>
-          ) : (
-            <TransactionHistory transactions={transactions} keys={keys} assignees={INITIAL_ASSIGNEES} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="hardware" className="mt-0">
-          {isStaffOrAdmin ? (
-            <div className="space-y-6 pt-6">
-              <div className="px-6">
-                 <h2 className="text-xl font-bold text-primary">Hardware Monitor</h2>
-                 <p className="text-xs text-muted-foreground">Detailed physical state of the cabinet sensors.</p>
-              </div>
-              <HardwareMonitor />
-              <div className="px-6 mb-20">
-                <Card className="border-none shadow-sm rounded-3xl bg-slate-100 p-6">
-                  <h3 className="font-bold text-primary mb-2 flex items-center gap-2 text-sm">
-                    <Cpu size={16} className="text-accent" />
-                    Integration Info
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    This cabinet is connected via ESP32. Peg sensors detect physical key presence through microswitches connected to GPIO pins.
-                  </p>
-                  <Button variant="link" className="text-[10px] p-0 h-auto mt-2 font-bold" onClick={() => toast({ title: "Developer Note", description: "Firmware code is located in docs/esp32_firmware.ino" })}>
-                    VIEW FIRMWARE DOCUMENTATION
-                  </Button>
-                </Card>
-              </div>
-            </div>
+        <TabsContent value="users" className="mt-0">
+          {isAdminUser ? (
+            <UserManagement />
           ) : (
             <div className="p-10 text-center">
               <ShieldAlert className="mx-auto mb-4 text-rose-500" size={48} />
@@ -409,7 +366,7 @@ export default function Home() {
         </TabsContent>
 
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-xl border-t mobile-nav-shadow z-50 px-4 py-3">
-          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : (isStaffOrAdmin ? 'grid-cols-3' : 'grid-cols-2')} bg-transparent gap-1`}>
+          <TabsList className={`grid w-full ${isAdminUser ? 'grid-cols-5' : (isStaffOrAdmin ? 'grid-cols-4' : 'grid-cols-2')} bg-transparent gap-1`}>
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
@@ -426,11 +383,11 @@ export default function Home() {
             </TabsTrigger>
             {isStaffOrAdmin && (
               <TabsTrigger 
-                value="hardware" 
+                value="ai" 
                 className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
               >
-                <Cpu size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">HW</span>
+                <Sparkles size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">AI</span>
               </TabsTrigger>
             )}
             {isAdminUser && (
@@ -453,6 +410,15 @@ export default function Home() {
                   )}
                 </TabsTrigger>
               </>
+            )}
+            {!isAdminUser && isStaffOrAdmin && (
+               <TabsTrigger 
+                value="profile" 
+                className="flex flex-col items-center gap-1.5 py-1 px-0 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <UserIcon size={18} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Me</span>
+              </TabsTrigger>
             )}
           </TabsList>
         </div>
