@@ -40,11 +40,19 @@ service cloud.firestore {
      */
     match /user_profiles/{uid} {
       allow read: if isSignedIn();
-      // Allow creation/updates for the owner as long as they don't elevate their own role
-      allow create, update: if (isSignedIn() && request.auth.uid == uid && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-        isAdmin()
-      )) || isAdmin();
+      
+      // Allow creation if it's the user's own profile and they start as guest (or are master admin)
+      allow create: if isSignedIn() && request.auth.uid == uid && (
+        request.resource.data.role == 'guest' || 
+        request.auth.token.email == 'wilsonintai76@gmail.com' ||
+        request.auth.uid == 'cpygG7wuaQVcvOa0bjMCDzNc1DN2'
+      );
+
+      // Allow updates to own profile (cannot change role) or full admin control
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && (
+        request.resource.data.role == resource.data.role
+      ));
+      
       allow delete: if isAdmin();
     }
 
