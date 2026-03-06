@@ -46,12 +46,12 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
     <Card 
       className="p-4 mb-3 border-none shadow-sm transition-transform group relative overflow-hidden bg-white"
     >
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="font-semibold text-base text-foreground leading-tight">{keyData.name}</h3>
-          <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">{keyData.id}</span>
+      <div className="flex justify-between items-start mb-2 gap-2">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <h3 className="font-semibold text-base text-foreground leading-tight truncate">{keyData.name}</h3>
+          <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider truncate">{keyData.id}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {isAdmin && (
             <>
               <EditKeyDialog keyData={keyData} />
@@ -67,7 +67,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               )}
             </>
           )}
-          <Badge variant={config.variant} className="text-[10px] uppercase font-bold px-2 py-0">
+          <Badge variant={config.variant} className="text-[10px] uppercase font-bold px-2 py-0 whitespace-nowrap">
             {config.label}
           </Badge>
         </div>
@@ -76,18 +76,18 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Tag size={12} className="text-accent" />
-          <span>{keyData.type}</span>
+          <span className="truncate">{keyData.type}</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin size={12} className="text-accent" />
-          <span>{keyData.location}</span>
+          <span className="truncate">{keyData.location}</span>
         </div>
       </div>
 
       {keyData.currentAssigneeId && (
         <div className="mt-3 pt-3 border-t flex items-center justify-between text-[11px]">
           <span className="text-muted-foreground uppercase font-semibold">Assigned To:</span>
-          <span className="font-bold text-primary">{keyData.currentAssigneeId}</span>
+          <span className="font-bold text-primary truncate ml-2">{keyData.currentAssigneeId}</span>
         </div>
       )}
     </Card>
