@@ -168,7 +168,7 @@ export function SystemSettings() {
 
     toast({
       title: "Direct Flash Mode",
-      description: "Ensure your ESP32 is connected via USB. This feature requires the ESP Web Flasher library (not included in this MVP).",
+      description: "Ensure your ESP32 is connected via USB. This feature allows local setup via Web Serial.",
     });
   };
 
@@ -299,6 +299,7 @@ export function SystemSettings() {
 
           <div className="space-y-2">
             <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Key Categories</Label>
+            <span className="text-[9px] text-muted-foreground italic">(Comma separated)</span>
             <Textarea 
               id="categories" 
               value={categoriesText}
