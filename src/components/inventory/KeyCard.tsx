@@ -4,7 +4,7 @@
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2, User, Phone, RotateCcw } from "lucide-react";
+import { MapPin, Tag, Trash2, User, Phone, RotateCcw, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
@@ -19,9 +19,10 @@ import {
 import { doc, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { EditKeyDialog } from "./EditKeyDialog";
+import { formatDistanceToNow } from "date-fns";
 
 interface KeyCardProps {
-  keyData: Key & { pegIndex?: number };
+  keyData: Key;
   isAdmin?: boolean;
 }
 
@@ -38,7 +39,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
   const { data: status } = useDoc<any>(statusDocRef);
 
-  // Fetch assignee profile if key is not available (checked out or overdue)
+  // Fetch assignee profile if key is not available
   const assigneeDocRef = useMemoFirebase(() => {
     if (!firestore || !keyData.currentAssigneeId || keyData.status === 'available') return null;
     return doc(firestore, 'user_profiles', keyData.currentAssigneeId);
@@ -77,10 +78,10 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
     updateDocumentNonBlocking(keyRef, {
       currentStatus: 'available',
       lastAssignedToUserId: null,
+      lastCheckoutTimestamp: null,
       updatedAt: new Date().toISOString()
     });
 
-    // Record override in Audit Log
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'INVENTORY',
       message: `Admin Override: Marked ${keyData.name} as AVAILABLE (Manual Return)`,
@@ -91,7 +92,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
     toast({
       title: "Manual Return Logged",
-      description: `${keyData.name} has been set to available. Hardware sensor state ignored.`,
+      description: `${keyData.name} has been set to available.`,
     });
   };
 
@@ -100,7 +101,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
       className="p-4 mb-3 border-none shadow-sm transition-transform group relative overflow-hidden bg-white"
     >
       <div className="flex justify-between items-start mb-2 gap-2">
-        <div className="flex flex-col gap-0.5 min-w-0">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-base text-foreground leading-tight truncate">{keyData.name}</h3>
             {keyData.pegIndex !== undefined && (
@@ -113,6 +114,12 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               />
             )}
           </div>
+          {keyData.status !== 'available' && keyData.lastCheckoutTimestamp && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+              <Clock size={10} />
+              <span>Taken {formatDistanceToNow(new Date(keyData.lastCheckoutTimestamp), { addSuffix: true })}</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {isAdmin && (
@@ -123,7 +130,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
                   size="icon"
                   className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-full"
                   onClick={handleManualReturn}
-                  title="Manual Hardware Override (Return Key)"
+                  title="Manual Return"
                 >
                   <RotateCcw size={16} />
                 </Button>
@@ -172,7 +179,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
                 <User size={12} />
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="text-xs font-bold text-primary truncate max-w-[120px]">
+                <span className="text-xs font-bold text-primary truncate">
                   {isAssigneeLoading ? 'Loading...' : (assigneeProfile?.fullName || 'Unknown User')}
                 </span>
                 {!isAssigneeLoading && assigneeProfile?.phoneNumber && (

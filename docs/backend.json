@@ -100,6 +100,11 @@
         "lastAssignedToUserId": {
           "type": "string"
         },
+        "lastCheckoutTimestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the key was last removed from the cabinet."
+        },
         "pegIndex": {
           "type": "integer",
           "description": "The physical position/peg index in the hardware cabinet."

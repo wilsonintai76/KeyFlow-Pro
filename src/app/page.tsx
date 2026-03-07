@@ -78,7 +78,7 @@ export default function Home() {
       const email = user.email?.toLowerCase();
       const isMasterAdmin = email === 'wilsonintai76@gmail.com';
 
-      // 1. Ensure current user profile exists
+      // Ensure current user profile exists
       if (profile === null) {
         const snap = await getDoc(profileDocRef!);
         if (!snap.exists()) {
@@ -99,7 +99,7 @@ export default function Home() {
         }
       }
 
-      // 2. Master Admin Logic: Ensure Wilson's profile exists for role recognition
+      // Wilson (Staff) Placeholder for role recognition
       if (isMasterAdmin) {
         const usersRef = collection(firestore, 'user_profiles');
         const qWilson = query(usersRef, where('email', '==', 'wilson@poliku.edu.my'));
@@ -157,6 +157,7 @@ export default function Home() {
       location: k.location,
       status: k.currentStatus as any,
       currentAssigneeId: k.lastAssignedToUserId,
+      lastCheckoutTimestamp: k.lastCheckoutTimestamp,
       pegIndex: k.pegIndex
     })) as Key[];
   }, [keysData]);
@@ -182,7 +183,7 @@ export default function Home() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: 'Cabinet manually unlocked from dashboard',
+      message: `Cabinet unlocked by ${user.displayName || 'Staff member'}`,
       userId: user.uid,
       userName: user.displayName || 'Staff',
       timestamp: new Date().toISOString()
@@ -190,7 +191,7 @@ export default function Home() {
 
     toast({
       title: "Access Granted",
-      description: "Cabinet solenoid triggered. You may now access the keys.",
+      description: "Cabinet solenoid triggered.",
     });
   };
 
@@ -243,15 +244,15 @@ export default function Home() {
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg">Cabinet Control</h3>
+                    <h3 className="font-bold text-lg">Cabinet Access</h3>
                     {userRole === 'guest' && <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-400">RESTRICTED</Badge>}
                   </div>
-                  <p className="text-xs opacity-80">{isStaffOrAdmin ? 'Trigger solenoid to unlock' : 'Staff access required to unlock'}</p>
+                  <p className="text-xs opacity-80">{isStaffOrAdmin ? 'Open cabinet door' : 'Staff access required'}</p>
                 </div>
                 <Button 
                   onClick={handleUnlockCabinet} 
                   disabled={!isStaffOrAdmin}
-                  className={`${isStaffOrAdmin ? 'bg-accent hover:bg-accent/90 text-primary animate-pulse' : 'bg-slate-400 text-slate-100'} font-black rounded-full shadow-xl transition-all`}
+                  className={`${isStaffOrAdmin ? 'bg-accent hover:bg-accent/90 text-primary' : 'bg-slate-400 text-slate-100'} font-black rounded-full shadow-xl transition-all`}
                   size="icon"
                 >
                   {isStaffOrAdmin ? <Unlock size={24} /> : <ShieldAlert size={24} />}
@@ -306,7 +307,7 @@ export default function Home() {
                   <div className="px-6 pt-4">
                     <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-xl p-1 h-11">
                       <TabsTrigger value="system" className="rounded-lg text-[9px] font-black uppercase">Settings</TabsTrigger>
-                      <TabsTrigger value="audit" className="rounded-lg text-[9px] font-black uppercase">Audit</TabsTrigger>
+                      <TabsTrigger value="audit" className="rounded-lg text-[9px] font-black uppercase">Activity Log</TabsTrigger>
                       <TabsTrigger value="complaints" className="rounded-lg text-[9px] font-black uppercase relative">
                         Issues
                         {pendingComplaintsCount > 0 && (

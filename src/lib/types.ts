@@ -8,6 +8,8 @@ export interface Key {
   location: string;
   status: KeyStatus;
   currentAssigneeId?: string;
+  lastCheckoutTimestamp?: string;
+  pegIndex?: number;
   lastServiceDate?: string;
 }
 
