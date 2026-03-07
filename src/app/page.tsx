@@ -28,7 +28,6 @@ import {
   initiateGoogleSignIn,
   addDocumentNonBlocking,
   setDocumentNonBlocking,
-  updateDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, orderBy, doc, where, getDoc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -101,7 +100,7 @@ export default function Home() {
         }
       }
 
-      // 2. Master Admin Logic: Ensure Wilson's profile exists
+      // 2. Master Admin Logic: Ensure Wilson's profile exists for role recognition
       if (isMasterAdmin) {
         const usersRef = collection(firestore, 'user_profiles');
         const qWilson = query(usersRef, where('email', '==', 'wilson@poliku.edu.my'));
