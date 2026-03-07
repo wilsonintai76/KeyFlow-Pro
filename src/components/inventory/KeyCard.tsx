@@ -1,10 +1,9 @@
-
 "use client";
 
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2, User, Phone, RotateCcw, Clock } from "lucide-react";
+import { MapPin, Tag, Trash2, User, Phone, RotateCcw, Clock, Key as KeyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
@@ -31,7 +30,6 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const { user } = useUser();
   const { toast } = useToast();
 
-  // Fetch live cabinet status to check physical presence
   const statusDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'cabinet_status', 'main_cabinet');
@@ -39,7 +37,6 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
   const { data: status } = useDoc<any>(statusDocRef);
 
-  // Fetch assignee profile if key is not available
   const assigneeDocRef = useMemoFirebase(() => {
     if (!firestore || !keyData.currentAssigneeId || keyData.status === 'available') return null;
     return doc(firestore, 'user_profiles', keyData.currentAssigneeId);
@@ -49,10 +46,10 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
   const isPhysicallyPresent = keyData.pegIndex !== undefined && status?.pegStates?.[keyData.pegIndex] === true;
 
-  const statusConfig: Record<KeyStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-    available: { label: "Available", variant: "secondary" },
-    checked_out: { label: "Checked Out", variant: "default" },
-    overdue: { label: "Overdue", variant: "destructive" },
+  const statusConfig: Record<KeyStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+    available: { label: "Available", variant: "secondary", icon: KeyIcon },
+    checked_out: { label: "Checked Out", variant: "default", icon: Clock },
+    overdue: { label: "Overdue", variant: "destructive", icon: Clock },
   };
 
   const config = statusConfig[keyData.status];
@@ -60,22 +57,15 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firestore || !keyData.id) return;
-
-    const keyRef = doc(firestore, 'keys', keyData.id);
-    deleteDocumentNonBlocking(keyRef);
-
-    toast({
-      title: "Key Deleted",
-      description: `${keyData.name} has been removed from inventory.`,
-    });
+    deleteDocumentNonBlocking(doc(firestore, 'keys', keyData.id));
+    toast({ title: "Key Deleted", description: "Removed from inventory." });
   };
 
   const handleManualReturn = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firestore || !keyData.id || !user) return;
 
-    const keyRef = doc(firestore, 'keys', keyData.id);
-    updateDocumentNonBlocking(keyRef, {
+    updateDocumentNonBlocking(doc(firestore, 'keys', keyData.id), {
       currentStatus: 'available',
       lastAssignedToUserId: null,
       lastCheckoutTimestamp: null,
@@ -84,116 +74,99 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'INVENTORY',
-      message: `Admin Override: Marked ${keyData.name} as AVAILABLE (Manual Return)`,
+      message: `Admin Override: ${keyData.name} manual return.`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
     });
 
-    toast({
-      title: "Manual Return Logged",
-      description: `${keyData.name} has been set to available.`,
-    });
+    toast({ title: "Manual Override", description: "Key status reset to available." });
   };
 
   return (
-    <Card 
-      className="p-4 mb-3 border-none shadow-sm transition-transform group relative overflow-hidden bg-white"
-    >
-      <div className="flex justify-between items-start mb-2 gap-2">
-        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+    <Card className="p-4 mb-4 border-none shadow-sm transition-all active:scale-[0.98] group relative overflow-hidden bg-white rounded-2xl ring-1 ring-slate-100">
+      <div className="flex justify-between items-start mb-3 gap-3">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-base text-foreground leading-tight truncate">{keyData.name}</h3>
+            <h3 className="font-bold text-lg text-primary leading-tight truncate tracking-tight">{keyData.name}</h3>
             {keyData.pegIndex !== undefined && (
               <div 
                 className={cn(
-                  "w-2 h-2 rounded-full animate-pulse shrink-0", 
-                  isPhysicallyPresent ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-200"
+                  "w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-500", 
+                  isPhysicallyPresent ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]" : "bg-slate-200"
                 )} 
-                title={isPhysicallyPresent ? "Physically Present" : "Physically Absent"}
               />
             )}
           </div>
           {keyData.status !== 'available' && keyData.lastCheckoutTimestamp && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
-              <Clock size={10} />
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 tracking-tight">
+              <Clock size={12} className="text-primary/40" />
               <span>Taken {formatDistanceToNow(new Date(keyData.lastCheckoutTimestamp), { addSuffix: true })}</span>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {isAdmin && (
-            <>
-              {keyData.status !== 'available' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-full"
-                  onClick={handleManualReturn}
-                  title="Manual Return"
-                >
-                  <RotateCcw size={16} />
-                </Button>
-              )}
-              <EditKeyDialog keyData={keyData} />
-              {keyData.status === 'available' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all duration-200"
-                  onClick={handleDelete}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              )}
-            </>
-          )}
-          <Badge variant={config.variant} className="text-[10px] uppercase font-bold px-2 py-0 whitespace-nowrap">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge variant={config.variant} className="text-[10px] font-black uppercase tracking-tight px-2.5 h-6 rounded-lg whitespace-nowrap shadow-sm">
             {config.label}
           </Badge>
         </div>
       </div>
       
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2 bg-slate-50/50 p-3 rounded-xl border border-slate-50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Tag size={12} className="text-accent" />
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <Tag size={13} className="text-primary/40" />
             <span className="truncate">{keyData.type}</span>
           </div>
           {keyData.pegIndex !== undefined && (
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">PEG #{keyData.pegIndex + 1}</span>
+            <span className="text-[10px] font-black text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-100 shadow-sm">SLOT #{keyData.pegIndex + 1}</span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin size={12} className="text-accent" />
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <MapPin size={13} className="text-primary/40" />
           <span className="truncate">{keyData.location}</span>
         </div>
       </div>
 
       {keyData.status !== 'available' && (
-        <div className="mt-3 pt-3 border-t flex flex-col gap-2">
-          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Current Borrower</span>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-slate-100 p-1.5 rounded-full text-slate-500 shrink-0">
-                <User size={12} />
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+          <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest">Current Borrower</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="bg-primary/5 p-2 rounded-xl text-primary shrink-0">
+                <User size={14} className="stroke-[2.5]" />
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="text-xs font-bold text-primary truncate">
-                  {isAssigneeLoading ? 'Loading...' : (assigneeProfile?.fullName || 'Unknown User')}
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-primary truncate">
+                  {isAssigneeLoading ? '...' : (assigneeProfile?.fullName || 'Unknown User')}
                 </span>
                 {!isAssigneeLoading && assigneeProfile?.phoneNumber && (
-                  <a 
-                    href={`tel:${assigneeProfile.phoneNumber}`}
-                    className="text-[10px] font-bold text-accent flex items-center gap-1 hover:text-accent/80 transition-colors whitespace-nowrap"
-                  >
-                    <Phone size={10} className="shrink-0" />
+                  <a href={`tel:${assigneeProfile.phoneNumber}`} className="text-xs font-bold text-accent flex items-center gap-1.5 hover:text-accent/80 active:scale-95 transition-all">
+                    <Phone size={12} className="stroke-[3]" />
                     {assigneeProfile.phoneNumber}
                   </a>
                 )}
               </div>
             </div>
+            
+            {isAdmin && (
+              <div className="flex gap-1 shrink-0">
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl" onClick={handleManualReturn}>
+                  <RotateCcw size={18} />
+                </Button>
+                <EditKeyDialog keyData={keyData} />
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {isAdmin && keyData.status === 'available' && (
+        <div className="absolute top-4 right-4 flex gap-1 items-center animate-in fade-in duration-300">
+           <EditKeyDialog keyData={keyData} />
+           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg" onClick={handleDelete}>
+            <Trash2 size={16} />
+          </Button>
         </div>
       )}
     </Card>

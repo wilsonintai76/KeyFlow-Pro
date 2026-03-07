@@ -13,28 +13,31 @@ export function MobileHeader({ onProfileClick }: MobileHeaderProps) {
 
   const getInitials = (name: string | null) => {
     if (!name) return '??';
-    const parts = name.split(' ');
+    const parts = name.trim().split(' ');
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-primary font-bold text-xl">
-        <div className="bg-primary text-white p-1.5 rounded-lg shadow-sm">
-          <Key size={20} />
+    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-xl border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="bg-primary text-white p-2 rounded-xl shadow-lg shadow-primary/20 rotate-[-5deg]">
+          <Key size={20} className="stroke-[2.5]" />
         </div>
-        <span className="tracking-tight">KeyFlow <span className="text-accent">Pro</span></span>
+        <div className="flex flex-col">
+          <span className="text-xl font-black tracking-tight text-primary leading-none">KeyFlow</span>
+          <span className="text-[10px] font-black text-accent uppercase tracking-widest leading-none mt-1">PRO MANAGEMENT</span>
+        </div>
       </div>
       
       <button 
         onClick={onProfileClick}
-        className="rounded-full hover:ring-2 hover:ring-accent/50 transition-all focus:outline-none"
+        className="rounded-2xl hover:ring-4 hover:ring-accent/10 transition-all focus:outline-none p-0.5 bg-slate-50 border border-slate-200"
         aria-label="View Profile"
       >
-        <Avatar className="w-8 h-8 border shadow-sm">
-          {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
-          <AvatarFallback className="bg-secondary text-[10px] font-bold text-primary">
+        <Avatar className="w-9 h-9 border-2 border-white shadow-sm rounded-xl">
+          {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} className="rounded-xl" />}
+          <AvatarFallback className="bg-slate-100 text-[11px] font-black text-primary rounded-xl">
             {getInitials(user?.displayName || null)}
           </AvatarFallback>
         </Avatar>
