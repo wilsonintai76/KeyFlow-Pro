@@ -101,18 +101,14 @@ export default function Home() {
         }
       }
 
-      // 2. Master Admin Logic: Wilson Profile and Peg 3 Injection (Deduplicated)
+      // 2. Master Admin Logic: Ensure Wilson's profile exists
       if (isMasterAdmin) {
-        // Find or create Wilson's profile specifically
         const usersRef = collection(firestore, 'user_profiles');
         const qWilson = query(usersRef, where('email', '==', 'wilson@poliku.edu.my'));
         const wilsonDocs = await getDocs(qWilson);
         
-        let wilsonId = 'wilson_staff_placeholder';
-        if (!wilsonDocs.empty) {
-          wilsonId = wilsonDocs.docs[0].id;
-        } else {
-          // Only create placeholder if he hasn't signed in yet
+        if (wilsonDocs.empty) {
+          const wilsonId = 'wilson_staff_placeholder';
           const wilsonProfileRef = doc(firestore, 'user_profiles', wilsonId);
           setDocumentNonBlocking(wilsonProfileRef, {
             id: wilsonId,
@@ -123,44 +119,14 @@ export default function Home() {
             role: 'staff',
             createdAt: new Date().toISOString()
           }, { merge: true });
-        }
-
-        // Search for Key at Peg 3 (index 2) using query to avoid duplicates
-        const keysRef = collection(firestore, 'keys');
-        const qKey = query(keysRef, where('pegIndex', '==', 2));
-        const keyDocs = await getDocs(qKey);
-
-        if (keyDocs.empty) {
-          // Create only if no key exists at this peg index anywhere in the collection
-          const peg3KeyId = 'workshop_key_peg_3';
-          setDocumentNonBlocking(doc(firestore, 'keys', peg3KeyId), {
-            id: peg3KeyId,
-            keyIdentifier: 'WS-PEG-03',
-            description: 'Workshop',
-            location: 'Main Cabinet Slot 3',
-            currentStatus: 'checked_out',
-            pegIndex: 2,
-            lastAssignedToUserId: wilsonId,
-            createdAt: new Date().toISOString()
-          }, { merge: true });
 
           addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-            type: 'INVENTORY',
-            message: 'Bootstrap: Injected Workshop Key at Peg 3 assigned to Wilson',
+            type: 'USER_MGMT',
+            message: 'Bootstrap: Created profile for wilson@poliku.edu.my',
             userId: user.uid,
             userName: user.displayName || 'Admin',
             timestamp: new Date().toISOString()
           });
-        } else {
-          // If a key at Peg 3 exists, ensure it's assigned to Wilson as requested
-          const existingKeyDoc = keyDocs.docs[0];
-          const keyData = existingKeyDoc.data();
-          if (keyData.currentStatus !== 'checked_out' || keyData.lastAssignedToUserId !== wilsonId) {
-            updateDocumentNonBlocking(existingKeyDoc.ref, {
-              currentStatus: 'checked_out',
-              lastAssignedToUserId: wilsonId
-            });
-          }
         }
       }
     }
