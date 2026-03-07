@@ -106,6 +106,14 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {isAdmin && keyData.status === 'available' && (
+            <div className="flex gap-1 items-center mr-1">
+              <EditKeyDialog keyData={keyData} />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg" onClick={handleDelete}>
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          )}
           <Badge variant={config.variant} className="text-[10px] font-black uppercase tracking-tight px-2.5 h-6 rounded-lg whitespace-nowrap shadow-sm">
             {config.label}
           </Badge>
@@ -158,15 +166,6 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {isAdmin && keyData.status === 'available' && (
-        <div className="absolute top-4 right-4 flex gap-1 items-center animate-in fade-in duration-300">
-           <EditKeyDialog keyData={keyData} />
-           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg" onClick={handleDelete}>
-            <Trash2 size={16} />
-          </Button>
         </div>
       )}
     </Card>
