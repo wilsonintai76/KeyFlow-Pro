@@ -83,13 +83,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
     return {
-      areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
-      storage: servicesAvailable ? storage : null,
+      areServicesAvailable: !!(firebaseApp && firestore && auth && storage),
+      firebaseApp: firebaseApp || null,
+      firestore: firestore || null,
+      auth: auth || null,
+      storage: storage || null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
@@ -111,15 +110,20 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage) {
+  const isServer = typeof window === 'undefined';
+
+  // Only throw if we are on the client and services are actually missing.
+  // On the server, we allow the render to proceed (returning nulls in the context)
+  // so that the component can render its initial loading/placeholder state.
+  if (!isServer && (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage)) {
     throw new Error('Firebase core services not available. Check FirebaseProvider props.');
   }
 
   return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
-    storage: context.storage,
+    firebaseApp: context.firebaseApp!,
+    firestore: context.firestore!,
+    auth: context.auth!,
+    storage: context.storage!,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,

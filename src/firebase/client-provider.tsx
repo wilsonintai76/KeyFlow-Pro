@@ -12,13 +12,12 @@ interface FirebaseClientProviderProps {
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
+    // Initialize Firebase once per component mount.
     return initializeFirebase();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   useEffect(() => {
     // Set persistence to session so user logs out when closing the browser/app
-    // browserSessionPersistence clears auth state when the tab or window is closed.
     if (firebaseServices.auth) {
       setPersistence(firebaseServices.auth, browserSessionPersistence).catch((error) => {
         if (process.env.NODE_ENV !== 'production') {
