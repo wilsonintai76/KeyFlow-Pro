@@ -165,25 +165,27 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
       {keyData.status !== 'available' && (
         <div className="mt-3 pt-3 border-t flex flex-col gap-2">
-          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Currently Held By</span>
-          <div className="flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Current Borrower</span>
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-slate-100 p-1 rounded-full text-slate-500">
+              <div className="bg-slate-100 p-1.5 rounded-full text-slate-500 shrink-0">
                 <User size={12} />
               </div>
-              <span className="text-xs font-bold text-primary truncate">
-                {isAssigneeLoading ? 'Loading...' : (assigneeProfile?.fullName || 'Unknown User')}
-              </span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-xs font-bold text-primary truncate max-w-[120px]">
+                  {isAssigneeLoading ? 'Loading...' : (assigneeProfile?.fullName || 'Unknown User')}
+                </span>
+                {!isAssigneeLoading && assigneeProfile?.phoneNumber && (
+                  <a 
+                    href={`tel:${assigneeProfile.phoneNumber}`}
+                    className="text-[10px] font-bold text-accent flex items-center gap-1 hover:text-accent/80 transition-colors whitespace-nowrap"
+                  >
+                    <Phone size={10} className="shrink-0" />
+                    {assigneeProfile.phoneNumber}
+                  </a>
+                )}
+              </div>
             </div>
-            {assigneeProfile?.phoneNumber && (
-              <a 
-                href={`tel:${assigneeProfile.phoneNumber}`}
-                className="flex items-center gap-1 text-[10px] font-bold text-accent hover:text-accent/80 transition-colors"
-              >
-                <Phone size={10} />
-                {assigneeProfile.phoneNumber}
-              </a>
-            )}
           </div>
         </div>
       )}

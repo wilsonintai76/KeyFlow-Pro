@@ -83,7 +83,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
             id="fullName" 
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
+            className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent font-semibold"
             placeholder="Enter your full name"
           />
         </div>
@@ -97,7 +97,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
               placeholder="+60 12-345 6789" 
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              className="bg-slate-50 border-slate-100 h-11 pl-10 focus-visible:ring-accent"
+              className="bg-slate-50 border-slate-100 h-11 pl-10 focus-visible:ring-accent font-semibold"
             />
           </div>
         </div>
