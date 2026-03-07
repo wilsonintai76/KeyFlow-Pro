@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Key, KeyStatus } from "@/lib/types";
@@ -125,7 +126,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
                 <User size={12} />
               </div>
               <span className="text-xs font-bold text-primary truncate">
-                {isAssigneeLoading ? 'Loading...' : (assigneeProfile ? `${assigneeProfile.firstName} ${assigneeProfile.lastName}` : 'Unknown User')}
+                {isAssigneeLoading ? 'Loading...' : (assigneeProfile?.fullName || 'Unknown User')}
               </span>
             </div>
             {assigneeProfile?.phoneNumber && (

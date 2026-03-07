@@ -11,13 +11,9 @@
           "type": "string",
           "description": "Unique identifier for the UserProfile entity (Auth UID)."
         },
-        "firstName": {
+        "fullName": {
           "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
+          "description": "The full name of the user."
         },
         "email": {
           "type": "string",
@@ -40,8 +36,7 @@
       },
       "required": [
         "id",
-        "firstName",
-        "lastName",
+        "fullName",
         "email",
         "role"
       ]

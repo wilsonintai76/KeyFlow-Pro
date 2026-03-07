@@ -90,8 +90,7 @@ export default function Home() {
 
           const newProfile = {
             id: user.uid,
-            firstName: user.displayName?.split(' ')[0] || 'User',
-            lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+            fullName: user.displayName || 'Staff Member',
             email: user.email || '',
             role: role,
             createdAt: new Date().toISOString()
@@ -111,8 +110,7 @@ export default function Home() {
           const wilsonProfileRef = doc(firestore, 'user_profiles', wilsonId);
           setDocumentNonBlocking(wilsonProfileRef, {
             id: wilsonId,
-            firstName: 'Wilson',
-            lastName: 'Poliku',
+            fullName: 'Wilson Poliku',
             email: 'wilson@poliku.edu.my',
             phoneNumber: '+60 12-345 6789',
             role: 'staff',
@@ -341,9 +339,9 @@ export default function Home() {
                     {userRole.toUpperCase()}
                   </Badge>
                 </div>
-                <div className="text-center">
+                <div className="text-center px-4">
                   <h3 className="text-xl font-bold text-primary">
-                    {profile?.firstName ? `${profile.firstName} ${profile.lastName}` : (user.displayName || 'Staff Member')}
+                    {profile?.fullName || (user.displayName || 'Staff Member')}
                   </h3>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>

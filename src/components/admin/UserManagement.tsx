@@ -26,8 +26,7 @@ export function UserManagement() {
 
   const filteredUsers = (users || []).filter(u => 
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
     u.phoneNumber?.includes(search)
   );
 
@@ -92,7 +91,7 @@ export function UserManagement() {
                   <div className="flex justify-between items-start">
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <h3 className="font-bold text-primary leading-tight truncate">
-                        {userProfile.firstName} {userProfile.lastName}
+                        {userProfile.fullName}
                       </h3>
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -119,7 +118,7 @@ export function UserManagement() {
                     </div>
                     <Select 
                       value={userProfile.role} 
-                      onValueChange={(value) => handleRoleChange(userProfile.id, `${userProfile.firstName} ${userProfile.lastName}`, userProfile.role, value)}
+                      onValueChange={(value) => handleRoleChange(userProfile.id, userProfile.fullName, userProfile.role, value)}
                     >
                       <SelectTrigger className="h-8 w-28 text-[11px] font-bold bg-slate-50 border-none shadow-none rounded-lg focus:ring-accent">
                         <SelectValue />

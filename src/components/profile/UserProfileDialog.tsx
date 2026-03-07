@@ -19,8 +19,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,8 +32,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
 
   useEffect(() => {
     if (profile) {
-      if (profile.firstName) setFirstName(profile.firstName);
-      if (profile.lastName) setLastName(profile.lastName);
+      if (profile.fullName) setFullName(profile.fullName);
       if (profile.phoneNumber) setPhoneNumber(profile.phoneNumber);
     }
   }, [profile]);
@@ -45,8 +43,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
 
     setDocumentNonBlocking(userDocRef, {
       id: userId,
-      firstName,
-      lastName,
+      fullName,
       phoneNumber,
       updatedAt: new Date().toISOString()
     }, { merge: true });
@@ -55,7 +52,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
       setIsSaving(false);
       toast({
         title: "Profile Updated",
-        description: "Your name and contact information have been saved successfully.",
+        description: "Your information has been saved successfully.",
       });
     }, 500);
   };
@@ -80,25 +77,15 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
         <CardDescription className="text-xs">Update how you appear in the system.</CardDescription>
       </CardHeader>
       <CardContent className="p-5 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName" className="text-xs font-bold uppercase text-muted-foreground">First Name</Label>
-            <Input 
-              id="firstName" 
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName" className="text-xs font-bold uppercase text-muted-foreground">Last Name</Label>
-            <Input 
-              id="lastName" 
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="fullName" className="text-xs font-bold uppercase text-muted-foreground">Full Name</Label>
+          <Input 
+            id="fullName" 
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent"
+            placeholder="Enter your full name"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone" className="text-xs font-bold uppercase text-muted-foreground">Phone Number</Label>
