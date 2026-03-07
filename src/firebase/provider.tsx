@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -112,9 +113,8 @@ export const useFirebase = (): FirebaseServicesAndUser => {
 
   const isServer = typeof window === 'undefined';
 
-  // Only throw if we are on the client and services are actually missing.
-  // On the server, we allow the render to proceed (returning nulls in the context)
-  // so that the component can render its initial loading/placeholder state.
+  // During SSR, we return whatever is in the context even if nulls are present
+  // to prevent the server pre-render from crashing. The client will hydrate correctly.
   if (!isServer && (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage)) {
     throw new Error('Firebase core services not available. Check FirebaseProvider props.');
   }
