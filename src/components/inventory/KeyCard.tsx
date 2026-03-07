@@ -4,11 +4,19 @@
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Tag, Trash2, User, Phone } from "lucide-react";
+import { MapPin, Tag, Trash2, User, Phone, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useFirestore, deleteDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { 
+  useFirestore, 
+  deleteDocumentNonBlocking, 
+  useDoc, 
+  useMemoFirebase, 
+  updateDocumentNonBlocking, 
+  addDocumentNonBlocking,
+  useUser 
+} from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { EditKeyDialog } from "./EditKeyDialog";
 
@@ -19,6 +27,7 @@ interface KeyCardProps {
 
 export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   // Fetch live cabinet status to check physical presence
@@ -60,6 +69,32 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
     });
   };
 
+  const handleManualReturn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!firestore || !keyData.id || !user) return;
+
+    const keyRef = doc(firestore, 'keys', keyData.id);
+    updateDocumentNonBlocking(keyRef, {
+      currentStatus: 'available',
+      lastAssignedToUserId: null,
+      updatedAt: new Date().toISOString()
+    });
+
+    // Record override in Audit Log
+    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+      type: 'INVENTORY',
+      message: `Admin Override: Marked ${keyData.name} as AVAILABLE (Manual Return)`,
+      userId: user.uid,
+      userName: user.displayName || 'Admin',
+      timestamp: new Date().toISOString()
+    });
+
+    toast({
+      title: "Manual Return Logged",
+      description: `${keyData.name} has been set to available. Hardware sensor state ignored.`,
+    });
+  };
+
   return (
     <Card 
       className="p-4 mb-3 border-none shadow-sm transition-transform group relative overflow-hidden bg-white"
@@ -82,6 +117,17 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
         <div className="flex items-center gap-1 shrink-0">
           {isAdmin && (
             <>
+              {keyData.status !== 'available' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-full"
+                  onClick={handleManualReturn}
+                  title="Manual Hardware Override (Return Key)"
+                >
+                  <RotateCcw size={16} />
+                </Button>
+              )}
               <EditKeyDialog keyData={keyData} />
               {keyData.status === 'available' && (
                 <Button

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,10 +22,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Pencil, Loader2 } from 'lucide-react';
-import { useFirestore, useDoc, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { 
+  useFirestore, 
+  useDoc, 
+  updateDocumentNonBlocking, 
+  useMemoFirebase, 
+  useUser, 
+  addDocumentNonBlocking 
+} from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Key } from '@/lib/types';
+import { Key, KeyStatus } from '@/lib/types';
 
 interface EditKeyDialogProps {
   keyData: Key & { pegIndex?: number };
@@ -37,7 +44,10 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
   const [type, setType] = useState(keyData.type);
   const [location, setLocation] = useState(keyData.location);
   const [pegIndex, setPegIndex] = useState(keyData.pegIndex !== undefined && keyData.pegIndex !== null ? (keyData.pegIndex + 1).toString() : '');
+  const [status, setStatus] = useState<KeyStatus>(keyData.status);
+  
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const settingsDocRef = useMemoFirebase(() => {
@@ -71,13 +81,32 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
 
     const keyRef = doc(firestore, 'keys', keyData.id);
     
-    updateDocumentNonBlocking(keyRef, {
+    const updateData: any = {
       keyIdentifier: name,
       description: type,
       location: location,
       pegIndex: numericPegIndex,
+      currentStatus: status,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    // If status is manually reset to available, clear the current assignee
+    if (status === 'available') {
+      updateData.lastAssignedToUserId = null;
+    }
+
+    updateDocumentNonBlocking(keyRef, updateData);
+
+    // If status changed manually, log it for audit
+    if (status !== keyData.status && user) {
+      addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+        type: 'INVENTORY',
+        message: `Admin Override: Status of ${name} manually changed from ${keyData.status} to ${status}`,
+        userId: user.uid,
+        userName: user.displayName || 'Admin',
+        timestamp: new Date().toISOString()
+      });
+    }
 
     toast({
       title: "Update Success",
@@ -99,7 +128,7 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-primary">Edit Key Details</DialogTitle>
             <DialogDescription>
-              Modify the properties and cabinet slot for this key.
+              Modify key properties or perform a system override.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-6">
@@ -128,6 +157,21 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
                 </Select>
               </div>
               <div className="grid gap-1.5">
+                <Label htmlFor="edit-status" className="font-bold text-xs uppercase text-muted-foreground">Status (Override)</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as KeyStatus)}>
+                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="checked_out">Checked Out</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
                 <Label htmlFor="edit-pegIndex" className="font-bold text-xs uppercase text-muted-foreground">Slot (1-{pegCount})</Label>
                 <Input
                   id="edit-pegIndex"
@@ -139,16 +183,16 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
                   className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
                 />
               </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-location" className="font-bold text-xs uppercase text-muted-foreground">Storage Detail</Label>
-              <Input
-                id="edit-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
-                required
-              />
+              <div className="grid gap-1.5">
+                <Label htmlFor="edit-location" className="font-bold text-xs uppercase text-muted-foreground">Storage Detail</Label>
+                <Input
+                  id="edit-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-accent"
+                  required
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
