@@ -1,12 +1,11 @@
-
 "use client";
 
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, Clock, Mail, User, MessageSquareWarning, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, Mail, MessageSquareWarning, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Complaint } from '@/lib/types';
@@ -17,7 +16,8 @@ export function ComplaintManager() {
 
   const complaintsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'complaints'), orderBy('timestamp', 'desc'));
+    // Limit to 50 for Spark plan efficiency
+    return query(collection(firestore, 'complaints'), orderBy('timestamp', 'desc'), limit(50));
   }, [firestore]);
 
   const { data: complaints, isLoading } = useCollection<Complaint>(complaintsQuery);
@@ -29,7 +29,7 @@ export function ComplaintManager() {
     
     toast({
       title: "Issue Resolved",
-      description: "The complaint has been marked as resolved.",
+      description: "Marked as resolved.",
     });
   };
 
@@ -48,14 +48,14 @@ export function ComplaintManager() {
           <MessageSquareWarning size={22} className="text-accent" />
           User Complaints
         </h2>
-        <p className="text-xs text-muted-foreground">Address hardware issues and user concerns.</p>
+        <p className="text-xs text-muted-foreground">Limited to last 50 reports.</p>
       </div>
 
       <div className="space-y-3">
         {(!complaints || complaints.length === 0) ? (
           <div className="text-center py-12 bg-white rounded-3xl border border-dashed flex flex-col items-center gap-3">
             <CheckCircle2 className="text-emerald-500 opacity-20" size={48} />
-            <p className="text-sm text-muted-foreground font-medium">All systems clear. No complaints.</p>
+            <p className="text-sm text-muted-foreground font-medium">No complaints found.</p>
           </div>
         ) : (
           complaints.map((c) => (
@@ -83,18 +83,12 @@ export function ComplaintManager() {
                 </div>
 
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-700 leading-relaxed italic">
-                    "{c.description}"
-                  </p>
+                  <p className="text-xs text-slate-700 leading-relaxed italic">"{c.description}"</p>
                 </div>
 
                 {c.status === 'pending' && (
-                  <Button 
-                    onClick={() => handleResolve(c.id)}
-                    className="w-full h-9 text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
-                  >
-                    <CheckCircle2 size={14} />
-                    Mark as Resolved
+                  <Button onClick={() => handleResolve(c.id)} className="w-full h-9 text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
+                    <CheckCircle2 size={14} /> Mark as Resolved
                   </Button>
                 )}
               </CardContent>
