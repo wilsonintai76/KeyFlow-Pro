@@ -34,10 +34,10 @@ export interface FirebaseContextState {
 }
 
 export interface FirebaseServicesAndUser {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
-  storage: FirebaseStorage;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
+  storage: FirebaseStorage | null;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -111,41 +111,35 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  const isServer = typeof window === 'undefined';
-
-  // During SSR, we return whatever is in the context even if nulls are present
-  // to prevent the server pre-render from crashing. The client will hydrate correctly.
-  if (!isServer && (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage)) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
-  }
-
+  // Return context as is, handling potential nulls at the hook consumer level
+  // to avoid SSR crashes.
   return {
-    firebaseApp: context.firebaseApp!,
-    firestore: context.firestore!,
-    auth: context.auth!,
-    storage: context.storage!,
+    firebaseApp: context.firebaseApp,
+    firestore: context.firestore,
+    auth: context.auth,
+    storage: context.storage,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
   };
 };
 
-export const useAuth = (): Auth => {
+export const useAuth = (): Auth | null => {
   const { auth } = useFirebase();
   return auth;
 };
 
-export const useFirestore = (): Firestore => {
+export const useFirestore = (): Firestore | null => {
   const { firestore } = useFirebase();
   return firestore;
 };
 
-export const useStorage = (): FirebaseStorage => {
+export const useStorage = (): FirebaseStorage | null => {
   const { storage } = useFirebase();
   return storage;
 };
 
-export const useFirebaseApp = (): FirebaseApp => {
+export const useFirebaseApp = (): FirebaseApp | null => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
 };
