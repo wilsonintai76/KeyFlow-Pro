@@ -19,22 +19,19 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Settings, 
-  Clock, 
   Save, 
   Loader2, 
-  Tag, 
   Cpu, 
   RefreshCw, 
-  Activity, 
   LayoutGrid, 
-  Link as LinkIcon, 
   Upload, 
   Usb,
-  ShieldCheck
+  ShieldCheck,
+  FileCode,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
 
 export function SystemSettings() {
   const firestore = useFirestore();
@@ -63,7 +60,7 @@ export function SystemSettings() {
     return doc(firestore, 'cabinet_status', 'main_cabinet');
   }, [firestore]);
 
-  const { data: settings, isLoading } = useDoc<any>(settingsDocRef);
+  const { data: settings } = useDoc<any>(settingsDocRef);
   const { data: status } = useDoc<any>(statusDocRef);
 
   useEffect(() => {
@@ -79,22 +76,22 @@ export function SystemSettings() {
     const file = e.target.files?.[0];
     if (!file || !storage || !user) return;
 
-    if (!file.name.endsWith('.bin')) {
-      toast({ variant: "destructive", title: "Invalid File", description: "Only .bin firmware files are supported." });
+    if (!file.name.endsWith('.py')) {
+      toast({ variant: "destructive", title: "Invalid File", description: "Please upload a .py script (e.g. code.py)." });
       return;
     }
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `firmware/keyflow_pro_${Date.now()}.bin`);
+      const storageRef = ref(storage, `scripts/keyflow_logic_${Date.now()}.py`);
       const snapshot = await uploadBytes(storageRef, file);
       const url = await getDownloadURL(snapshot.ref);
       
       setFirmwareUrl(url);
-      toast({ title: "Upload Success", description: "Binary uploaded and URL generated." });
+      toast({ title: "Upload Success", description: "CircuitPython script uploaded." });
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload binary to storage." });
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload script." });
     } finally {
       setIsUploading(false);
     }
@@ -125,17 +122,17 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsSaving(false);
-      toast({ title: "Settings Saved" });
+      toast({ title: "Policies Updated" });
     }, 600);
   };
 
-  const handleFirmwareUpdate = () => {
+  const handleUpdateTrigger = () => {
     if (!firestore || !user || !firmwareUrl) return;
     
     setIsUpdatingFirmware(true);
 
     addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
-      action: 'FIRMWARE_UPDATE',
+      action: 'UPDATE_SCRIPT',
       payload: firmwareUrl,
       timestamp: new Date().toISOString(),
       userId: user.uid,
@@ -144,7 +141,7 @@ export function SystemSettings() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: `OTA Update triggered: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
+      message: `Script update dispatched: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -152,24 +149,8 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsUpdatingFirmware(false);
-      toast({ title: "Update Dispatched", description: "Device signaled to start OTA." });
+      toast({ title: "Update Sent", description: "Controller will fetch new code.py on next poll." });
     }, 1000);
-  };
-
-  const handleDirectUsbFlash = async () => {
-    if (!('serial' in navigator)) {
-      toast({ 
-        variant: "destructive", 
-        title: "Not Supported", 
-        description: "Your browser doesn't support Web Serial. Use Chrome or Edge." 
-      });
-      return;
-    }
-
-    toast({
-      title: "Direct Flash Mode",
-      description: "Ensure your ESP32 is connected via USB. This feature allows local setup via Web Serial.",
-    });
   };
 
   const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
@@ -178,10 +159,10 @@ export function SystemSettings() {
     <div className="px-6 py-4 space-y-6 mb-20">
       <div className="space-y-1">
         <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-          <Settings size={22} className="text-accent" />
-          Hardware & System
+          <FileCode size={22} className="text-accent" />
+          CircuitPython Hub
         </h2>
-        <p className="text-xs text-muted-foreground">Manage physical slots and firmware logic.</p>
+        <p className="text-xs text-muted-foreground">Manage scripts and physical hardware configuration.</p>
       </div>
 
       <Card className="border-none shadow-sm overflow-hidden rounded-3xl bg-white">
@@ -189,7 +170,7 @@ export function SystemSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-primary">
               <Cpu size={18} className="text-accent" />
-              <CardTitle className="text-base font-bold">Firmware Maintenance</CardTitle>
+              <CardTitle className="text-base font-bold">Controller Logic</CardTitle>
             </div>
             <Badge variant={isOnline ? "default" : "outline"} className={isOnline ? "bg-emerald-500" : "text-slate-400"}>
               {isOnline ? "ONLINE" : "OFFLINE"}
@@ -202,34 +183,35 @@ export function SystemSettings() {
               <Usb size={24} />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold">Local USB Flash</h4>
-              <p className="text-[10px] text-muted-foreground">Update your device directly via USB cable (No Internet required).</p>
+              <h4 className="text-sm font-bold">USB Drag & Drop</h4>
+              <p className="text-[10px] text-muted-foreground">Connect your board and copy the script directly to the CIRCUITPY drive.</p>
             </div>
             <Button 
               variant="outline" 
-              onClick={handleDirectUsbFlash}
               className="w-full h-10 rounded-xl font-bold text-xs gap-2"
+              onClick={() => window.open(firmwareUrl, '_blank')}
+              disabled={!firmwareUrl}
             >
-              <Usb size={14} />
-              Connect & Flash via USB
+              <Download size={14} />
+              Download Current code.py
             </Button>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-px bg-slate-200 flex-1" />
-              <span className="text-[10px] font-black text-slate-400 uppercase">OR REMOTE OTA</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase">OR REMOTE PUSH</span>
               <div className="h-px bg-slate-200 flex-1" />
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Direct Binary Upload</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Upload Script (.py)</Label>
               <input 
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileUpload} 
                 className="hidden" 
-                accept=".bin" 
+                accept=".py" 
               />
               <Button 
                 onClick={() => fileInputRef.current?.click()}
@@ -238,7 +220,7 @@ export function SystemSettings() {
                 className="w-full h-12 rounded-xl bg-accent/10 border-accent/20 border-dashed text-primary hover:bg-accent/20 font-bold gap-2"
               >
                 {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                Select .bin file from PC
+                Upload New code.py
               </Button>
             </div>
 
@@ -246,15 +228,15 @@ export function SystemSettings() {
               <div className="space-y-2 animate-in fade-in zoom-in-95">
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                   <ShieldCheck className="text-emerald-500" size={16} />
-                  <p className="text-[10px] font-bold text-emerald-700 truncate">Ready: {firmwareUrl.split('/').pop()?.substring(0, 30)}...</p>
+                  <p className="text-[10px] font-bold text-emerald-700 truncate">Staged: {firmwareUrl.split('/').pop()?.substring(0, 30)}...</p>
                 </div>
                 <Button 
-                  onClick={handleFirmwareUpdate}
+                  onClick={handleUpdateTrigger}
                   disabled={isUpdatingFirmware || !isOnline}
                   className="w-full h-12 rounded-xl bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20"
                 >
                   {isUpdatingFirmware ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={16} />}
-                  Execute Remote Update
+                  Push to Hardware
                 </Button>
               </div>
             )}
@@ -266,7 +248,7 @@ export function SystemSettings() {
         <CardHeader className="bg-slate-50 border-b pb-4">
           <div className="flex items-center gap-2 text-primary">
             <LayoutGrid size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Cabinet Layout</CardTitle>
+            <CardTitle className="text-base font-bold">Cabinet Config</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
@@ -285,7 +267,7 @@ export function SystemSettings() {
             </div>
             <div className="space-y-2">
               <div className="h-10 flex flex-col justify-end">
-                <Label htmlFor="duration" className="text-[10px] font-black uppercase text-muted-foreground leading-tight pb-1">Borrow Limit (Hrs)</Label>
+                <Label htmlFor="duration" className="text-[10px] font-black uppercase text-muted-foreground leading-tight pb-1">Return Goal (Hrs)</Label>
               </div>
               <Input 
                 id="duration" 
@@ -298,8 +280,7 @@ export function SystemSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Key Categories</Label>
-            <span className="text-[9px] text-muted-foreground italic">(Comma separated)</span>
+            <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Inventory Labels</Label>
             <Textarea 
               id="categories" 
               value={categoriesText}
@@ -314,7 +295,7 @@ export function SystemSettings() {
             className="w-full bg-primary text-white gap-2 rounded-xl h-12 font-bold shadow-lg shadow-primary/10"
           >
             {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Save System Policies
+            Sync Cabinet Rules
           </Button>
         </CardContent>
       </Card>

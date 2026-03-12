@@ -4,7 +4,7 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle, Cpu } from 'lucide-react';
+import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface HardwareMonitorProps {
@@ -96,9 +96,9 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           </div>
           
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Device FW</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Controller</p>
             <p className="text-[11px] font-bold text-accent">
-              v{status?.firmwareVersion || '1.0.4'}
+              CP v{status?.firmwareVersion || '9.0.0'}
             </p>
           </div>
         </CardContent>
@@ -109,12 +109,12 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
             <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Activity size={12} className="text-accent" />
-              Dynamic Peg Map ({pegCount})
+              Dynamic Slot Map ({pegCount})
             </CardTitle>
             <div className="flex gap-3">
                <div className="flex items-center gap-1">
                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                 <span className="text-[9px] font-bold">IN</span>
+                 <span className="text-[9px] font-bold">KEY IN</span>
                </div>
                <div className="flex items-center gap-1">
                  <div className="w-2 h-2 rounded-full bg-slate-200" />
@@ -142,8 +142,8 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
         <div className="flex items-center gap-2 px-2 text-rose-500 bg-rose-50/50 py-3 rounded-2xl border border-rose-100 border-dashed">
           <AlertCircle size={16} />
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase">Hardware connection lost</span>
-            <span className="text-[9px] opacity-70">Cabinet hardware is not reporting heartbeat.</span>
+            <span className="text-[10px] font-black uppercase">Hardware signal lost</span>
+            <span className="text-[9px] opacity-70">Controller is not reporting heartbeat.</span>
           </div>
         </div>
       )}
