@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -40,7 +41,7 @@ export default function Home() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  // Inactivity session management to reduce active listener time
+  // Inactivity session management to reduce active listener time (Spark Plan)
   useEffect(() => {
     if (!user || !auth) return;
     let timeoutId: any;
@@ -79,7 +80,6 @@ export default function Home() {
     const isMasterAdmin = email === 'wilsonintai76@gmail.com';
     const isTrustedStaff = email === 'wilson@poliku.edu.my';
 
-    // Only create profile if it definitely doesn't exist (handled by useDoc returning null)
     let role = 'guest';
     if (isMasterAdmin) role = 'admin';
     else if (isTrustedStaff) role = 'staff';
@@ -179,7 +179,7 @@ export default function Home() {
           <h1 className="text-4xl font-black tracking-tight text-primary">KeyFlow <span className="text-accent">Pro</span></h1>
           <p className="text-muted-foreground text-sm font-medium">Intelligent staff key management.</p>
         </div>
-        <Button onClick={() => auth && initiateGoogleSignIn(auth)} className="w-full max-w-xs h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" variant="outline">
+        <Button onClick={() => auth && initiateGoogleSignIn(auth)} className="w-full h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" variant="outline">
           Continue with Google
         </Button>
       </div>
@@ -243,7 +243,7 @@ export default function Home() {
             <Tabs defaultValue="system">
               <div className="px-5 pt-4">
                 <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-2xl h-12">
-                  <TabsTrigger value="system" className="rounded-xl text-[10px] font-black uppercase">Policies</TabsTrigger>
+                  <TabsTrigger value="system" className="rounded-xl text-[10px] font-black uppercase">Hub</TabsTrigger>
                   <TabsTrigger value="audit" className="rounded-xl text-[10px] font-black uppercase">Logs</TabsTrigger>
                   <TabsTrigger value="complaints" className="rounded-xl text-[10px] font-black uppercase relative">
                     Issues {pendingComplaintsCount > 0 && <span className="ml-1 text-rose-500">•</span>}

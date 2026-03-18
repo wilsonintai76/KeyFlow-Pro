@@ -1,10 +1,12 @@
+
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
+import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle, Cpu } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface HardwareMonitorProps {
@@ -13,6 +15,9 @@ interface HardwareMonitorProps {
 
 export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
   const firestore = useFirestore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const statusDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -29,8 +34,8 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
 
   if (isStatusLoading || isSettingsLoading) return null;
 
-  // Online if heartbeat received in last 60 seconds
-  const isOnline = status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
+  // Online if heartbeat received in last 60 seconds (Client-side only check to avoid hydration mismatch)
+  const isOnline = mounted && status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
   const isDoorOpen = status?.doorState === 'open';
   const pegStates = status?.pegStates || {};
   const pegCount = settings?.pegCount || 10;
@@ -61,7 +66,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
                 {status?.wifiSignal || 0}%
              </div>
              <p className="text-[10px] font-medium mt-1">
-                {status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
+                {mounted && status?.lastHeartbeat ? formatDistanceToNow(new Date(status.lastHeartbeat), { addSuffix: true }) : 'Never'}
              </p>
           </div>
         </CardContent>
@@ -138,7 +143,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
         </Card>
       )}
       
-      {!isOnline && (
+      {!isOnline && mounted && (
         <div className="flex items-center gap-2 px-2 text-rose-500 bg-rose-50/50 py-3 rounded-2xl border border-rose-100 border-dashed">
           <AlertCircle size={16} />
           <div className="flex flex-col">

@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Key, KeyStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -29,6 +31,9 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const statusDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -98,7 +103,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               />
             )}
           </div>
-          {keyData.status !== 'available' && keyData.lastCheckoutTimestamp && (
+          {mounted && keyData.status !== 'available' && keyData.lastCheckoutTimestamp && (
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 tracking-tight">
               <Clock size={12} className="text-primary/40" />
               <span>Taken {formatDistanceToNow(new Date(keyData.lastCheckoutTimestamp), { addSuffix: true })}</span>
