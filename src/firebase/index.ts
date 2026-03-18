@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -11,13 +12,16 @@ import { getStorage } from 'firebase/storage';
  * Ensures single instance initialization across client-side navigation.
  */
 export function initializeFirebase() {
+  let app: FirebaseApp;
+  
   if (!getApps().length) {
     // Explicitly pass config object to ensure API key is captured correctly
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
   }
 
-  return getSdks(getApp());
+  return getSdks(app);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
