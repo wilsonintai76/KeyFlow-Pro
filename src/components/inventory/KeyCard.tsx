@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -100,7 +99,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               <div 
                 className={cn(
                   "w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-500", 
-                  isPhysicallyPresent ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]" : "bg-slate-200"
+                  isPhysicallyPresent ? "bg-emerald-50 shadow-[0_0_12px_rgba(16,185,129,0.6)]" : "bg-slate-200"
                 )} 
               />
             )}

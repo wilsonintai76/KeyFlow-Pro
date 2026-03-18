@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -173,7 +172,7 @@ export function SystemSettings() {
               <Cpu size={18} className="text-accent" />
               <CardTitle className="text-base font-bold">Controller Logic</CardTitle>
             </div>
-            <Badge variant={isOnline ? "default" : "outline"} className={isOnline ? "bg-emerald-500" : "text-slate-400"}>
+            <Badge variant={isOnline ? "default" : "outline"} className={isOnline ? "bg-emerald-50" : "text-slate-400"}>
               {isOnline ? "ONLINE" : "OFFLINE"}
             </Badge>
           </div>
