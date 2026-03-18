@@ -150,13 +150,19 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
                 <User size={14} className="stroke-[2.5]" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-primary truncate">
-                  {isAssigneeLoading ? '...' : (assigneeProfile?.fullName || 'Unknown User')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-primary truncate">
+                    {isAssigneeLoading ? '...' : (assigneeProfile?.fullName || 'Unknown User')}
+                  </span>
+                  {!isAssigneeLoading && assigneeProfile?.phoneNumber && (
+                    <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded-md shrink-0">
+                      {assigneeProfile.phoneNumber}
+                    </span>
+                  )}
+                </div>
                 {!isAssigneeLoading && assigneeProfile?.phoneNumber && (
-                  <a href={`tel:${assigneeProfile.phoneNumber}`} className="text-xs font-bold text-accent flex items-center gap-1.5 hover:text-accent/80 active:scale-95 transition-all">
-                    <Phone size={12} className="stroke-[3]" />
-                    {assigneeProfile.phoneNumber}
+                  <a href={`tel:${assigneeProfile.phoneNumber}`} className="text-[10px] font-bold text-accent/70 flex items-center gap-1 mt-0.5 hover:text-accent transition-all">
+                    <Phone size={10} /> Call Now
                   </a>
                 )}
               </div>

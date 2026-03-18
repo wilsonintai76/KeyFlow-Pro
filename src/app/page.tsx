@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -72,7 +72,7 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
 
-  // Spark Plan Optimized Onboarding
+  // Spark Plan Optimized Onboarding - Unified to fullName
   useEffect(() => {
     if (!user || !firestore || isProfileLoading || profile) return;
     
