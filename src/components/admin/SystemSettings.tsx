@@ -89,7 +89,7 @@ export function SystemSettings() {
       const url = await getDownloadURL(snapshot.ref);
       
       setFirmwareUrl(url);
-      toast({ title: "Upload Success", description: "CircuitPython script uploaded." });
+      toast({ title: "Upload Success", description: "CircuitPython script staged in Cloud." });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload script." });
@@ -142,7 +142,7 @@ export function SystemSettings() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: `Script update dispatched: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
+      message: `CircuitPython script update pushed: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -150,7 +150,7 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsUpdatingFirmware(false);
-      toast({ title: "Update Sent", description: "Controller will fetch new code.py on next poll." });
+      toast({ title: "Signal Sent", description: "Controller will update code.py on next sync." });
     }, 1000);
   };
 
@@ -184,8 +184,8 @@ export function SystemSettings() {
               <Usb size={24} />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold">USB Drag & Drop</h4>
-              <p className="text-[10px] text-muted-foreground">Connect your board and copy the script directly to the CIRCUITPY drive.</p>
+              <h4 className="text-sm font-bold">USB Workflow (Local)</h4>
+              <p className="text-[10px] text-muted-foreground">Connect board and copy script directly to the <b>CIRCUITPY</b> drive.</p>
             </div>
             <Button 
               variant="outline" 
@@ -201,12 +201,12 @@ export function SystemSettings() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-px bg-slate-200 flex-1" />
-              <span className="text-[10px] font-black text-slate-400 uppercase">OR REMOTE PUSH</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase">Remote Sync</span>
               <div className="h-px bg-slate-200 flex-1" />
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Upload Script (.py)</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Upload Logic (.py)</Label>
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -221,7 +221,7 @@ export function SystemSettings() {
                 className="w-full h-12 rounded-xl bg-accent/10 border-accent/20 border-dashed text-primary hover:bg-accent/20 font-bold gap-2"
               >
                 {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                Upload New code.py
+                Stage New code.py
               </Button>
             </div>
 
@@ -229,7 +229,7 @@ export function SystemSettings() {
               <div className="space-y-2 animate-in fade-in zoom-in-95">
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                   <ShieldCheck className="text-emerald-500" size={16} />
-                  <p className="text-[10px] font-bold text-emerald-700 truncate">Staged: {firmwareUrl.split('/').pop()?.substring(0, 30)}...</p>
+                  <p className="text-[10px] font-bold text-emerald-700 truncate">Ready: {firmwareUrl.split('/').pop()?.substring(0, 30)}...</p>
                 </div>
                 <Button 
                   onClick={handleUpdateTrigger}
@@ -237,7 +237,7 @@ export function SystemSettings() {
                   className="w-full h-12 rounded-xl bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20"
                 >
                   {isUpdatingFirmware ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={16} />}
-                  Push to Hardware
+                  Push Script to ESP32
                 </Button>
               </div>
             )}
@@ -249,7 +249,7 @@ export function SystemSettings() {
         <CardHeader className="bg-slate-50 border-b pb-4">
           <div className="flex items-center gap-2 text-primary">
             <LayoutGrid size={18} className="text-accent" />
-            <CardTitle className="text-base font-bold">Cabinet Config</CardTitle>
+            <CardTitle className="text-base font-bold">Cabinet Policies</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
@@ -281,7 +281,7 @@ export function SystemSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Inventory Labels</Label>
+            <Label htmlFor="categories" className="text-[10px] font-black uppercase text-muted-foreground">Inventory Labels (CSV)</Label>
             <Textarea 
               id="categories" 
               value={categoriesText}

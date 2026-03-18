@@ -33,7 +33,9 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const statusDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -79,7 +81,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'INVENTORY',
-      message: `Admin Override: ${keyData.name} manual return.`,
+      message: `Admin Override: ${keyData.name} manual return (bypass microswitch).`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -149,8 +151,8 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               <div className="bg-primary/5 p-2 rounded-xl text-primary shrink-0">
                 <User size={14} className="stroke-[2.5]" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-2 overflow-hidden">
                   <span className="text-sm font-bold text-primary truncate">
                     {isAssigneeLoading ? '...' : (assigneeProfile?.fullName || 'Unknown User')}
                   </span>
@@ -162,7 +164,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
                 </div>
                 {!isAssigneeLoading && assigneeProfile?.phoneNumber && (
                   <a href={`tel:${assigneeProfile.phoneNumber}`} className="text-[10px] font-bold text-accent/70 flex items-center gap-1 mt-0.5 hover:text-accent transition-all">
-                    <Phone size={10} /> Call Now
+                    <Phone size={10} /> Call Borrower
                   </a>
                 )}
               </div>
@@ -170,7 +172,7 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
             
             {isAdmin && (
               <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl" onClick={handleManualReturn}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl" onClick={handleManualReturn} title="Manual Return Override">
                   <RotateCcw size={18} />
                 </Button>
                 <EditKeyDialog keyData={keyData} />

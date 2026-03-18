@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, ShieldAlert, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Key as KeyIcon, Users, Loader2, Unlock, User as UserIcon, Settings as SettingsIcon } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { KeyStats } from '@/components/dashboard/KeyStats';
 import { HardwareMonitor } from '@/components/dashboard/HardwareMonitor';
@@ -41,10 +41,11 @@ export default function Home() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  // Inactivity session management to reduce active listener time (Spark Plan)
+  // Spark Plan Optimized: Auto sign-out after 15 mins inactivity to close listeners
   useEffect(() => {
     if (!user || !auth) return;
-    let timeoutId: any;
+    let timeoutId: NodeJS.Timeout;
+    
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
@@ -55,10 +56,13 @@ export default function Home() {
         });
       }, 15 * 60 * 1000);
     };
+
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handleActivity = () => resetTimer();
+    
     events.forEach(event => document.addEventListener(event, handleActivity));
     resetTimer();
+    
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, handleActivity));
@@ -72,7 +76,7 @@ export default function Home() {
   
   const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
 
-  // Spark Plan Optimized Onboarding - Unified to fullName
+  // Unified Identity: Bootstrap profile using fullName
   useEffect(() => {
     if (!user || !firestore || isProfileLoading || profile) return;
     
@@ -99,7 +103,7 @@ export default function Home() {
   const isAdminUser = userRole === 'admin';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
 
-  // Efficient Firestore queries with limits for Spark Plan
+  // Efficient Queries with Spark Plan limits
   const keysQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
@@ -235,7 +239,7 @@ export default function Home() {
         </TabsContent>
 
         <TabsContent value="users" className="mt-0">
-          {isAdminUser ? <UserManagement /> : <div className="p-12 text-center">Restricted</div>}
+          {isAdminUser ? <UserManagement /> : <div className="p-12 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">Restricted Access</div>}
         </TabsContent>
 
         <TabsContent value="settings" className="mt-0">
@@ -254,7 +258,7 @@ export default function Home() {
               <TabsContent value="audit"><AuditLog /></TabsContent>
               <TabsContent value="complaints"><ComplaintManager /></TabsContent>
             </Tabs>
-          ) : <div className="p-12 text-center">Restricted</div>}
+          ) : <div className="p-12 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">Restricted Access</div>}
         </TabsContent>
 
         <TabsContent value="profile" className="mt-0 p-5 space-y-6">

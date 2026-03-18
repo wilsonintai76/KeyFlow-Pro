@@ -7,18 +7,14 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage';
 
-// Force use of firebaseConfig to resolve auth/api-key-not-valid errors
+/**
+ * Initializes Firebase with explicit configuration to resolve auth/api-key errors.
+ * Ensures single instance initialization across client-side navigation.
+ */
 export function initializeFirebase() {
   if (!getApps().length) {
-    let firebaseApp;
-    try {
-      // Prioritize explicit config for studio environments
-      firebaseApp = initializeApp(firebaseConfig);
-    } catch (e) {
-      console.error('Firebase initialization error:', e);
-      firebaseApp = initializeApp(firebaseConfig);
-    }
-
+    // Explicitly pass config object to ensure API key is captured correctly
+    const firebaseApp = initializeApp(firebaseConfig);
     return getSdks(firebaseApp);
   }
 
@@ -28,6 +24,7 @@ export function initializeFirebase() {
 export function getSdks(firebaseApp: FirebaseApp) {
   let firestore;
   try {
+    // Force long polling for studio environments to avoid WebSocket/API key issues
     firestore = initializeFirestore(firebaseApp, {
       experimentalForceLongPolling: true,
     });
