@@ -102,7 +102,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
           <div className="text-right">
             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Controller</p>
             <p className="text-[11px] font-bold text-accent">
-              CP v{status?.firmwareVersion || '9.0.0'}
+              FW v{status?.firmwareVersion || '1.0.0'}
             </p>
           </div>
         </CardContent>

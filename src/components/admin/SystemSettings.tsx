@@ -76,19 +76,21 @@ export function SystemSettings() {
     const file = e.target.files?.[0];
     if (!file || !storage || !user) return;
 
-    if (!file.name.endsWith('.py')) {
-      toast({ variant: "destructive", title: "Invalid File", description: "Please upload a .py script (e.g. code.py)." });
+    const lowerName = file.name.toLowerCase();
+    if (!(lowerName.endsWith('.bin') || lowerName.endsWith('.uf2'))) {
+      toast({ variant: "destructive", title: "Invalid File", description: "Please upload compiled firmware (.bin or .uf2)." });
       return;
     }
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `scripts/keyflow_logic_${Date.now()}.py`);
+      const extension = lowerName.endsWith('.uf2') ? 'uf2' : 'bin';
+      const storageRef = ref(storage, `firmware/keyflow_firmware_${Date.now()}.${extension}`);
       const snapshot = await uploadBytes(storageRef, file);
       const url = await getDownloadURL(snapshot.ref);
       
       setFirmwareUrl(url);
-      toast({ title: "Upload Success", description: "CircuitPython script staged in Cloud." });
+      toast({ title: "Upload Success", description: "Arduino firmware staged in Cloud." });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload script." });
@@ -132,7 +134,7 @@ export function SystemSettings() {
     setIsUpdatingFirmware(true);
 
     addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
-      action: 'UPDATE_SCRIPT',
+      action: 'FIRMWARE_UPDATE',
       payload: firmwareUrl,
       timestamp: new Date().toISOString(),
       userId: user.uid,
@@ -141,7 +143,7 @@ export function SystemSettings() {
 
     addDocumentNonBlocking(collection(firestore, 'system_logs'), {
       type: 'HARDWARE',
-      message: `CircuitPython script update pushed: ${firmwareUrl.split('/').pop()?.substring(0, 15)}...`,
+      message: `Firmware update pushed: ${firmwareUrl.split('/').pop()?.substring(0, 20)}...`,
       userId: user.uid,
       userName: user.displayName || 'Admin',
       timestamp: new Date().toISOString()
@@ -149,7 +151,7 @@ export function SystemSettings() {
 
     setTimeout(() => {
       setIsUpdatingFirmware(false);
-      toast({ title: "Signal Sent", description: "Controller will update code.py on next sync." });
+      toast({ title: "Signal Sent", description: "Controller will apply firmware on next sync." });
     }, 1000);
   };
 
@@ -160,9 +162,9 @@ export function SystemSettings() {
       <div className="space-y-1">
         <h2 className="text-xl font-bold text-primary flex items-center gap-2">
           <FileCode size={22} className="text-accent" />
-          CircuitPython Hub
+          Firmware Hub
         </h2>
-        <p className="text-xs text-muted-foreground">Manage scripts and physical hardware configuration.</p>
+        <p className="text-xs text-muted-foreground">Manage Arduino firmware and physical hardware configuration.</p>
       </div>
 
       <Card className="border-none shadow-sm overflow-hidden rounded-3xl bg-white">
@@ -184,7 +186,7 @@ export function SystemSettings() {
             </div>
             <div className="space-y-1">
               <h4 className="text-sm font-bold">USB Workflow (Local)</h4>
-              <p className="text-[10px] text-muted-foreground">Connect board and copy script directly to the <b>CIRCUITPY</b> drive.</p>
+              <p className="text-[10px] text-muted-foreground">Connect board, compile in Arduino IDE, then flash firmware via USB.</p>
             </div>
             <Button 
               variant="outline" 
@@ -193,7 +195,7 @@ export function SystemSettings() {
               disabled={!firmwareUrl}
             >
               <Download size={14} />
-              Download Current code.py
+              Download Current Firmware
             </Button>
           </div>
 
@@ -205,13 +207,16 @@ export function SystemSettings() {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Upload Logic (.py)</Label>
+              <Label htmlFor="firmwareUpload" className="text-xs font-bold uppercase text-muted-foreground">Upload Firmware (.bin/.uf2)</Label>
               <input 
+                id="firmwareUpload"
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileUpload} 
                 className="hidden" 
-                accept=".py" 
+                accept=".bin,.uf2" 
+                aria-label="Upload firmware file"
+                title="Upload firmware file"
               />
               <Button 
                 onClick={() => fileInputRef.current?.click()}
@@ -220,7 +225,7 @@ export function SystemSettings() {
                 className="w-full h-12 rounded-xl bg-accent/10 border-accent/20 border-dashed text-primary hover:bg-accent/20 font-bold gap-2"
               >
                 {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                Stage New code.py
+                Stage New Firmware
               </Button>
             </div>
 
@@ -236,7 +241,7 @@ export function SystemSettings() {
                   className="w-full h-12 rounded-xl bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20"
                 >
                   {isUpdatingFirmware ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={16} />}
-                  Push Script to ESP32
+                  Push Firmware to ESP32
                 </Button>
               </div>
             )}
