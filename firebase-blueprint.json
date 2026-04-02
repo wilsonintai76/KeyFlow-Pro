@@ -1,0 +1,229 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user within the KeyFlow Pro application, focusing on profile details relevant for key assignments and administrative tasks.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity (Auth UID)."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address of the user.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's contact phone number."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "An optional employee ID or staff number for the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system.",
+          "enum": ["guest", "staff", "admin"]
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "email",
+        "role"
+      ]
+    },
+    "HardwareTrigger": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HardwareTrigger",
+      "type": "object",
+      "description": "A signal sent to hardware (ESP32) to perform an action like triggering a solenoid.",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string", "enum": ["UNLOCK_CABINET", "FIRMWARE_UPDATE"] },
+        "payload": { "type": "string", "description": "Optional data for the action, like an OTA URL." },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processed"] }
+      }
+    },
+    "CabinetStatus": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CabinetStatus",
+      "type": "object",
+      "description": "Live state of the physical key cabinet reported by ESP32.",
+      "properties": {
+        "doorState": { "type": "string", "enum": ["open", "closed"] },
+        "lastHeartbeat": { "type": "string", "format": "date-time" },
+        "wifiSignal": { "type": "integer" },
+        "firmwareVersion": { "type": "string" },
+        "pegStates": {
+          "type": "object",
+          "description": "Map of peg index to presence (true = key in, false = key out)",
+          "additionalProperties": { "type": "boolean" }
+        }
+      }
+    },
+    "Key": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Key",
+      "type": "object",
+      "description": "Represents a physical key managed by the KeyFlow Pro system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Key entity."
+        },
+        "keyIdentifier": {
+          "type": "string",
+          "description": "A human-readable identifier (e.g., 'MAIN-001')."
+        },
+        "description": {
+          "type": "string",
+          "description": "The category or type of the key (e.g., 'Workshop', 'Room')."
+        },
+        "location": {
+          "type": "string"
+        },
+        "currentStatus": {
+          "type": "string",
+          "description": "The current status of the key (e.g., 'available', 'checked_out', 'overdue')."
+        },
+        "lastAssignedToUserId": {
+          "type": "string"
+        },
+        "lastCheckoutTimestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the key was last removed from the cabinet."
+        },
+        "pegIndex": {
+          "type": "integer",
+          "description": "The physical position/peg index in the hardware cabinet."
+        }
+      },
+      "required": [
+        "id",
+        "keyIdentifier",
+        "description",
+        "location",
+        "currentStatus"
+      ]
+    },
+    "GlobalSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GlobalSettings",
+      "type": "object",
+      "description": "System-wide configuration settings.",
+      "properties": {
+        "maxBorrowDurationHours": {
+          "type": "integer",
+          "description": "Maximum hours a key can be borrowed before considered overdue.",
+          "default": 24
+        },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Available categories for keys (e.g., ['Workshop', 'Room', 'Machine'])"
+        },
+        "pegCount": {
+          "type": "integer",
+          "description": "Total number of physical key slots in the cabinet hardware.",
+          "default": 10
+        },
+        "lastFirmwareUrl": {
+          "type": "string",
+          "description": "The URL of the last successfully pushed firmware binary."
+        }
+      }
+    },
+    "Complaint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Complaint",
+      "type": "object",
+      "description": "A problem report or complaint submitted by a user to the system admin.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SystemLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemLog",
+      "type": "object",
+      "description": "A recorded event for auditing system activity.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["HARDWARE", "USER_MGMT", "INVENTORY", "AUTH"] },
+        "message": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "google"
+    ]
+  },
+  "firestore": {
+    "/user_profiles/{userId}": {
+      "schema": {
+        "$ref": "#/backend/entities/UserProfile"
+      },
+      "description": "Stores individual user profile data including roles."
+    },
+    "/hardware_triggers/{triggerId}": {
+      "schema": {
+        "$ref": "#/backend/entities/HardwareTrigger"
+      },
+      "description": "Collection monitored by ESP32 to trigger solenoids."
+    },
+    "/cabinet_status/{statusId}": {
+      "schema": {
+        "$ref": "#/backend/entities/CabinetStatus"
+      },
+      "description": "Stores live status of the physical hardware cabinet."
+    },
+    "/keys/{keyId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Key"
+      },
+      "description": "Main collection for managing the inventory of physical keys."
+    },
+    "/settings/{settingId}": {
+      "schema": {
+        "$ref": "#/backend/entities/GlobalSettings"
+      },
+      "description": "Global configuration documents."
+    },
+    "/complaints/{complaintId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Complaint"
+      },
+      "description": "User reported issues and complaints."
+    },
+    "/system_logs/{logId}": {
+      "schema": {
+        "$ref": "#/backend/entities/SystemLog"
+      },
+      "description": "Audit logs for tracking system-wide activity."
+    }
+  }
+}

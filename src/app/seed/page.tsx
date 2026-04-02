@@ -1,0 +1,114 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Database, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  useFirestore, 
+  doc, 
+  collection, 
+  setDocumentNonBlocking, 
+  addDocumentNonBlocking 
+} from '@/firebase';
+import { INITIAL_KEYS, INITIAL_ASSIGNEES, MOCK_USER } from '@/lib/mock-data';
+
+export default function SeedPage() {
+  const [status, setStatus] = useState<'idle' | 'seeding' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+  const firestore = useFirestore();
+
+  const handleSeed = async () => {
+    if (!firestore) return;
+    setStatus('seeding');
+    setMessage('Initializing database...');
+
+    try {
+      // 1. Seed User Profiles
+      for (const assignee of INITIAL_ASSIGNEES) {
+         const profileRef = doc(firestore, 'user_profiles', assignee.id);
+         setDocumentNonBlocking(profileRef, {
+           ...assignee,
+           role: assignee.id === MOCK_USER.uid ? 'admin' : 'staff',
+           createdAt: new Date().toISOString()
+         }, { merge: true });
+      }
+
+      // 2. Seed Keys
+      for (const key of INITIAL_KEYS) {
+        const keyRef = doc(firestore, 'keys', key.id);
+        setDocumentNonBlocking(keyRef, {
+          ...key,
+          currentStatus: key.currentStatus || 'available',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+
+      // 3. Seed Initial System Settings
+      const settingsRef = doc(firestore, 'system', 'config');
+      setDocumentNonBlocking(settingsRef, {
+        pegCount: 20,
+        categories: ['Workshop', 'Room', 'Machine', 'Office'],
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+
+      setStatus('success');
+      setMessage('Database successfully initialized with 5 keys and 3 user profiles.');
+    } catch (error: any) {
+      console.error(error);
+      setStatus('error');
+      setMessage(`Seeding failed: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-6">
+      <Card className="w-full max-w-md shadow-2xl rounded-[2.5rem] border-none overflow-hidden">
+        <CardHeader className="bg-primary text-white p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <Database className="text-primary" size={32} />
+          </div>
+          <CardTitle className="text-2xl font-black">System Init</CardTitle>
+          <CardDescription className="text-primary-foreground/70 font-medium">
+            Seed your live Firestore with initial data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 space-y-6">
+          <div className={`p-4 rounded-2xl text-sm font-bold flex items-center gap-3 ${
+            status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+            status === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+            'bg-slate-100 text-slate-600 border border-slate-200'
+          }`}>
+            {status === 'seeding' && <Loader2 className="animate-spin" size={20} />}
+            {status === 'success' && <CheckCircle2 size={20} />}
+            {status === 'error' && <AlertCircle size={20} />}
+            {status === 'idle' && <Database size={20} />}
+            {message || 'Ready to initialize.'}
+          </div>
+
+          <Button 
+            onClick={handleSeed}
+            disabled={status === 'seeding' || status === 'success'}
+            className="w-full h-14 rounded-2xl font-black text-lg shadow-xl transition-all active:scale-95 bg-primary hover:bg-primary/90"
+          >
+            {status === 'seeding' ? 'SEEDING...' : 'INITIALIZE DATABASE'}
+          </Button>
+
+          {status === 'success' && (
+            <Button 
+              variant="outline" 
+              className="w-full h-14 rounded-2xl font-black border-2"
+              onClick={() => window.location.href = '/'}
+            >
+              GO TO DASHBOARD
+            </Button>
+          )}
+
+          <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
+            Note: This will overwrite documents with the same IDs.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

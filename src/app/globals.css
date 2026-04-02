@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 214 21% 97%;
+    --foreground: 213 60% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 60% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 60% 10%;
+    --primary: 213 74% 31%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 20% 90%;
+    --secondary-foreground: 213 74% 31%;
+    --muted: 213 20% 92%;
+    --muted-foreground: 213 30% 45%;
+    --accent: 175 70% 45%;
+    --accent-foreground: 213 60% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 213 74% 31%;
+    --radius: 1.25rem;
+    --chart-1: 213 74% 31%;
+    --chart-2: 175 70% 45%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.mobile-nav-shadow {
+  box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-md border border-white/40;
+}
+
+/* Optimize rendering */
+.content-visibility-auto {
+  content-visibility: auto;
+}
+
+/* Fast touch response */
+button, [role="button"] {
+  @apply select-none;
+}
