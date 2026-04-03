@@ -7,11 +7,25 @@ import { createClient } from '@/lib/supabase/server'
 
 const app = new Hono().basePath('/api')
 
+// Global error handling
+app.onError((err, c) => {
+  console.error(`API Error: ${err.message}`)
+  return c.json({
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  }, 500)
+})
+
 // Example Route with HonoRPC and Zod Validation
 const routes = app
-  .get('/hello', (c) => {
+  .get('/health', (c) => {
     return c.json({
-      message: 'Hello from Hono!',
+      status: 'ok',
+      time: new Date().toISOString(),
+      env: {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      }
     })
   })
   .get('/profile', async (c) => {

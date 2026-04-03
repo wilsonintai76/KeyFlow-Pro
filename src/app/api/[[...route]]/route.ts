@@ -7,3 +7,6 @@ export const PATCH = patchHandler
 export const DELETE = deleteHandler
 export const PUT = putHandler
 export const OPTIONS = optionsHandler
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
