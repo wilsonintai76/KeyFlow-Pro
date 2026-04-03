@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Phone, Save, Loader2, User, Hash, GraduationCap, BadgeCheck, Mail } from 'lucide-react';
-import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase, doc } from '@/firebase';
+import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfile } from '@/lib/types';
 
@@ -15,9 +15,10 @@ interface UserProfileDialogProps {
 }
 
 export function UserProfileDialog({ userId }: UserProfileDialogProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
@@ -25,27 +26,37 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const [staffId, setStaffId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !userId) return null;
-    return doc(firestore, 'user_profiles', userId);
-  }, [firestore, userId]);
-
-  const { data: profile, isLoading } = useDoc<UserProfile>(userDocRef);
-
   useEffect(() => {
-    if (profile) {
-      if (profile.fullName) setFullName(profile.fullName);
-      if (profile.phoneNumber) setPhoneNumber(profile.phoneNumber);
-      if (profile.registrationNumber) setRegistrationNumber(profile.registrationNumber);
-      if (profile.studentClass) setStudentClass(profile.studentClass);
-      if (profile.staffId) setStaffId(profile.staffId);
-    }
-  }, [profile]);
+    const fetchProfile = async () => {
+      if (!userId) return;
+      setIsLoading(true);
+      try {
+        const res = await api.users[':id'].$get({
+          param: { id: userId }
+        });
+        const data = (await res.json()) as any;
+        if (data && !('error' in data)) {
+          setProfile(data as UserProfile);
+          setFullName(data.fullName || '');
+          setPhoneNumber(data.phoneNumber || '');
+          setRegistrationNumber(data.registrationNumber || '');
+          setStudentClass(data.studentClass || '');
+          setStaffId(data.staffId || '');
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [userId]);
 
   const isGuest = profile?.role === 'guest';
 
-  const handleSave = () => {
-    if (!firestore || !userId || !userDocRef || isGuest) return;
+  const handleSave = async () => {
+    if (!userId || isGuest) return;
 
     // Validation
     if (profile?.role === 'student') {
@@ -72,24 +83,32 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
 
     setIsSaving(true);
 
-    const updateData: Partial<UserProfile> = {
-      fullName,
-      phoneNumber,
-      registrationNumber: profile?.role === 'student' ? (registrationNumber || null) : null,
-      studentClass: profile?.role === 'student' ? (studentClass || null) : null,
-      staffId: (profile?.role === 'staff' || profile?.role === 'admin') ? (staffId || null) : null,
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const updateData = {
+        fullName,
+        phoneNumber,
+        registrationNumber: profile?.role === 'student' ? (registrationNumber || null) : null,
+        studentClass: profile?.role === 'student' ? (studentClass || null) : null,
+        staffId: (profile?.role === 'staff' || profile?.role === 'admin') ? (staffId || null) : null,
+      };
 
-    setDocumentNonBlocking(userDocRef, updateData, { merge: true });
+      await api.profile.$patch({
+        json: updateData
+      });
 
-    setTimeout(() => {
-      setIsSaving(false);
       toast({
         title: "Profile Updated",
         description: "Your information has been saved successfully.",
       });
-    }, 500);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save profile changes.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {

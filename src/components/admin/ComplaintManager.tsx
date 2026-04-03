@@ -1,6 +1,7 @@
 "use client";
 
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, collection, query, orderBy, doc, limit } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/hono-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,25 +11,48 @@ import { useToast } from '@/hooks/use-toast';
 import { Complaint } from '@/lib/types';
 
 export function ComplaintManager() {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const complaintsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'complaints'), orderBy('timestamp', 'desc'), limit(50));
-  }, [firestore]);
+  const fetchComplaints = async () => {
+    try {
+      const res = await api.complaints.$get();
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setComplaints(data);
+      }
+    } catch (err) {
+      console.error("Error fetching complaints:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const { data: complaints, isLoading } = useCollection<Complaint>(complaintsQuery);
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
 
-  const handleResolve = (complaintId: string) => {
-    if (!firestore) return;
-    const ref = doc(firestore, 'complaints', complaintId);
-    updateDocumentNonBlocking(ref, { status: 'resolved' });
-    
-    toast({
-      title: "Issue Resolved",
-      description: "Marked as resolved.",
-    });
+  const handleResolve = async (complaintId: string) => {
+    try {
+      await api.complaints[':id'].$patch({
+        param: { id: complaintId },
+        json: { status: 'resolved' }
+      });
+      
+      toast({
+        title: "Issue Resolved",
+        description: "Marked as resolved.",
+      });
+
+      fetchComplaints(); // Refresh list
+    } catch (err) {
+      toast({
+        title: "Update Failed",
+        description: "Could not mark as resolved.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {

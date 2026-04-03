@@ -1,19 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { 
-  useCollection, 
-  useFirestore, 
-  useMemoFirebase, 
-  updateDocumentNonBlocking, 
-  deleteDocumentNonBlocking,
-  addDocumentNonBlocking, 
-  useUser, 
-  collection, 
-  query, 
-  orderBy, 
-  doc 
-} from '@/firebase';
+import { useEffect } from 'react';
+import { useUser, useAuth } from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,16 +33,29 @@ import { Button } from '@/components/ui/button';
 
 export function UserManagement() {
   const [search, setSearch] = useState('');
-  const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'user_profiles'), orderBy('email', 'asc'));
-  }, [firestore]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+  const fetchUsers = async () => {
+    try {
+      const res = await api.users.$get();
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setUsers(data);
+      }
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const filteredUsers = (users || []).filter(u => 
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -60,25 +63,38 @@ export function UserManagement() {
     u.phoneNumber?.includes(search)
   );
 
-  const handleDeleteUser = (userId: string, userName: string) => {
-    if (!firestore || !currentUser) return;
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!currentUser) return;
     
-    const userRef = doc(firestore, 'user_profiles', userId);
-    deleteDocumentNonBlocking(userRef);
+    try {
+      await api.users[':id'].$delete({
+        param: { id: userId }
+      });
 
-    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-      type: 'USER_MGMT',
-      message: `Admin Override: User profile for ${userName} (ID: ${userId}) was DELETED`,
-      userId: currentUser.uid,
-      userName: currentUser.displayName || 'Admin',
-      timestamp: new Date().toISOString()
-    });
+      await api.logs.$post({
+        json: {
+          type: 'USER_MGMT',
+          message: `Admin Override: User profile for ${userName} (ID: ${userId}) was DELETED`,
+          userId: currentUser.id,
+          userName: currentUser.user_metadata?.full_name || 'Admin',
+        }
+      });
 
-    toast({
-      variant: "destructive",
-      title: "User Deleted",
-      description: `Profile for ${userName} has been removed.`,
-    });
+      toast({
+        variant: "destructive",
+        title: "User Deleted",
+        description: `Profile for ${userName} has been removed.`,
+      });
+
+      // Refresh list
+      fetchUsers();
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Could not remove user profile.",
+      });
+    }
   };
 
   const getRoleBadgeColor = (role: UserRole) => {

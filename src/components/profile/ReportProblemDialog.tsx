@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageSquareWarning, Loader2, Send } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, useUser, collection } from '@/firebase';
+import { useUser } from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 
 export function ReportProblemDialog() {
@@ -21,33 +22,39 @@ export function ReportProblemDialog() {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !firestore || !user) return;
+    if (!description || !user) return;
 
     setIsSubmitting(true);
 
-    addDocumentNonBlocking(collection(firestore, 'complaints'), {
-      userId: user.uid,
-      userName: user.displayName || 'Anonymous User',
-      userEmail: user.email || 'N/A',
-      description: description,
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    });
+    try {
+      await api.complaints.$post({
+        json: {
+          description,
+          userId: user.id,
+          userName: user.user_metadata?.full_name || 'Anonymous User',
+          userEmail: user.email || 'N/A',
+        }
+      });
 
-    setTimeout(() => {
-      setIsSubmitting(false);
       setOpen(false);
       setDescription('');
       toast({
         title: "Complaint Received",
         description: "The system administrator has been notified.",
       });
-    }, 600);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: "Could not send report.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

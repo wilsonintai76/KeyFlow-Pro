@@ -21,41 +21,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
-  useCollection, 
-  useDoc,
   useUser, 
-  useFirestore, 
-  useMemoFirebase,
   useAuth,
-  initiateGoogleSignIn,
-  setDocumentNonBlocking,
-  addDocumentNonBlocking,
-  collection,
-  query,
-  orderBy,
-  doc,
-  where,
-  limit,
-} from '@/firebase';
+} from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-  const auth = useAuth();
+  const { user, isLoading, signInWithGoogle, signOut } = useAuth();
   const { toast } = useToast();
 
+  const [profile, setProfile] = useState<any>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [keys, setKeys] = useState<Key[]>([]);
+  const [isKeysLoading, setIsKeysLoading] = useState(true);
+  const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
+
+  // Auto-logout timer
   useEffect(() => {
-    if (!user || !auth) return;
+    if (!user) return;
     let timeoutId: NodeJS.Timeout;
     
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        auth.signOut();
+        signOut();
         toast({
           title: "Session Expired",
           description: "Signed out to conserve system resources.",
@@ -73,66 +66,86 @@ export default function Home() {
       if (timeoutId) clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, handleActivity));
     };
-  }, [user, auth, toast]);
+  }, [user, signOut, toast]);
 
-  const profileDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'user_profiles', user.uid);
-  }, [firestore, user?.uid]);
-  
-  const { data: profile, isLoading: isProfileLoading } = useDoc<any>(profileDocRef);
-
+  // Fetch Profile
   useEffect(() => {
-    if (!user || !firestore || isProfileLoading || profile) return;
+    if (!user) return;
     
-    const email = user.email?.toLowerCase();
-    const isMasterAdmin = email === 'wilsonintai76@gmail.com';
+    const fetchProfile = async () => {
+      try {
+        const res = await api.profile.$get();
+        const data = await res.json();
+        
+        if (data && !('error' in data)) {
+          setProfile(data);
+        } else {
+          // Create profile if not exists
+          const email = user.email?.toLowerCase();
+          const isMasterAdmin = email === 'wilsonintai76@gmail.com';
+          const role = isMasterAdmin ? 'admin' : 'guest';
+          
+          const createRes = await api.profile.$post({
+            json: {
+              fullName: user.user_metadata?.full_name || 'Guest User',
+              email: user.email || '',
+              role: role,
+            }
+          });
+          const newData = await createRes.json();
+          if (!('error' in newData)) setProfile(newData);
+        }
+      } catch (err) {
+        console.error("Profile fetch error:", err);
+      } finally {
+        setIsProfileLoading(false);
+      }
+    };
 
-    let role: UserRole = 'guest';
-    if (isMasterAdmin) role = 'admin';
+    fetchProfile();
+  }, [user]);
 
-    setDocumentNonBlocking(profileDocRef!, {
-      id: user.uid,
-      fullName: user.displayName || 'Guest User',
-      email: user.email || '',
-      role: role,
-      phoneNumber: '',
-      createdAt: new Date().toISOString()
-    }, { merge: true });
-    
-  }, [user, isProfileLoading, profile, firestore, profileDocRef]);
+  // Fetch Keys & Complaints
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchData = async () => {
+      try {
+        const keysRes = await api.keys.$get();
+        const keysData = await keysRes.json();
+        if (Array.isArray(keysData)) {
+          setKeys(keysData.map((k: any) => ({
+            id: k.id,
+            name: k.keyIdentifier || k.name || 'Unnamed Key',
+            type: k.description || k.type || 'General',
+            location: k.location || 'Unknown',
+            status: (k.currentStatus || k.status || 'available') as any,
+            currentAssigneeId: k.lastAssignedToUserId || k.currentAssigneeId,
+            lastCheckoutTimestamp: k.lastCheckoutTimestamp,
+            pegIndex: k.pegIndex
+          })));
+        }
+
+        if (profile?.role === 'admin') {
+          const complaintsRes = await api.complaints.pending.$get();
+          const complaintsData = await complaintsRes.json();
+          if (Array.isArray(complaintsData)) {
+            setPendingComplaintsCount(complaintsData.length);
+          }
+        }
+      } catch (err) {
+        console.error("Data fetch error:", err);
+      } finally {
+        setIsKeysLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, profile?.role]);
 
   const userRole = profile?.role || 'guest';
   const isAdminUser = userRole === 'admin';
   const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
-
-  const keysQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'keys'), orderBy('keyIdentifier', 'asc'));
-  }, [firestore, user?.uid]);
-
-  const pendingComplaintsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isAdminUser) return null;
-    return query(collection(firestore, 'complaints'), where('status', '==', 'pending'), limit(10));
-  }, [firestore, user?.uid, isAdminUser]);
-
-  const { data: keysData, isLoading: isKeysLoading } = useCollection<any>(keysQuery);
-  const { data: pendingComplaints } = useCollection<Complaint>(pendingComplaintsQuery);
-
-  const pendingComplaintsCount = pendingComplaints?.length || 0;
-
-  const keys = useMemo(() => {
-    return (keysData || []).map(k => ({
-      id: k.id,
-      name: k.keyIdentifier || k.name || 'Unnamed Key',
-      type: k.description || k.type || 'General',
-      location: k.location || 'Unknown',
-      status: (k.currentStatus || k.status || 'available') as any,
-      currentAssigneeId: k.lastAssignedToUserId || k.currentAssigneeId,
-      lastCheckoutTimestamp: k.lastCheckoutTimestamp,
-      pegIndex: k.pegIndex
-    })) as Key[];
-  }, [keysData]);
 
   const stats = useMemo((): DashboardStats => {
     return {
@@ -143,31 +156,31 @@ export default function Home() {
     };
   }, [keys]);
 
-  const handleUnlockCabinet = () => {
-    if (!firestore || !user || !isStaffOrAdmin) return;
+  const handleUnlockCabinet = async () => {
+    if (!user || !isStaffOrAdmin) return;
     
-    addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
-      action: 'UNLOCK_CABINET',
-      timestamp: new Date().toISOString(),
-      userId: user.uid,
-      status: 'pending'
-    });
+    try {
+      await api.unlock.$post({
+        json: {
+          userId: user.id,
+          userName: profile?.fullName || user.user_metadata?.full_name || 'Staff',
+        }
+      });
 
-    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-      type: 'HARDWARE',
-      message: `Cabinet unlocked by ${profile?.fullName || user.displayName || 'Staff'}`,
-      userId: user.uid,
-      userName: profile?.fullName || user.displayName || 'Staff',
-      timestamp: new Date().toISOString()
-    });
-
-    toast({
-      title: "Opening Cabinet",
-      description: "Hardware signal dispatched.",
-    });
+      toast({
+        title: "Opening Cabinet",
+        description: "Hardware signal dispatched.",
+      });
+    } catch (err) {
+      toast({
+        title: "Unlock Failed",
+        description: "Could not dispatch hardware signal.",
+        variant: "destructive"
+      });
+    }
   };
 
-  if (isUserLoading || (user && isProfileLoading && !profile)) {
+  if (isLoading || (user && isProfileLoading && !profile)) {
     return <DashboardSkeleton />;
   }
 
@@ -181,7 +194,7 @@ export default function Home() {
           <h1 className="text-4xl font-black tracking-tight text-primary">KeyFlow <span className="text-accent">Pro</span></h1>
           <p className="text-muted-foreground text-sm font-medium">Intelligent staff key management.</p>
         </div>
-        <Button onClick={() => auth && initiateGoogleSignIn(auth)} className="w-full h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" variant="outline">
+        <Button onClick={() => signInWithGoogle()} className="w-full h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" variant="outline">
           Continue with Google
         </Button>
       </div>
@@ -253,13 +266,13 @@ export default function Home() {
               </Badge>
             </div>
             <div className="text-center px-6">
-              <h3 className="text-2xl font-black text-primary">{profile?.fullName || user.displayName}</h3>
+              <h3 className="text-2xl font-black text-primary">{profile?.fullName || user.user_metadata?.full_name}</h3>
               <p className="text-xs font-bold text-muted-foreground uppercase">{user.email}</p>
             </div>
           </div>
-          <UserProfileDialog userId={user.uid} />
+          <UserProfileDialog userId={user.id} />
           <ReportProblemDialog />
-          <Button variant="outline" className="w-full border-rose-100 text-rose-500 rounded-2xl h-14 font-black" onClick={() => auth?.signOut()}>
+          <Button variant="outline" className="w-full border-rose-100 text-rose-500 rounded-2xl h-14 font-black" onClick={() => signOut()}>
             SIGN OUT
           </Button>
         </TabsContent>

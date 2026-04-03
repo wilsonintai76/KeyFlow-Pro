@@ -1,7 +1,7 @@
 
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase';
+import { AuthProvider } from '@/lib/auth-provider';
 
 export const viewport: Viewport = {
   themeColor: '#144b89',
@@ -39,9 +39,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/keyflow/180/180" />
       </head>
       <body className="font-body antialiased bg-slate-50">
-        <FirebaseClientProvider>
+        <AuthProvider>
           {children}
-        </FirebaseClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );

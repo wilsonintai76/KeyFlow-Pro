@@ -7,9 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MapPin, Tag, Trash2, User, Phone, RotateCcw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useDoc, useMemoFirebase, useFirestore, doc } from "@/firebase";
+import { api } from "@/lib/hono-client";
 import { format, formatDistanceToNow } from "date-fns";
 import { EditKeyDialog } from './EditKeyDialog';
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/lib/auth-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface KeyCardProps {
   keyData: Key;
@@ -18,14 +31,71 @@ interface KeyCardProps {
 
 export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [assigneeProfile, setAssigneeProfile] = useState<any>(null);
+  const [isAssigneeLoading, setIsAssigneeLoading] = useState(false);
 
-  const firestore = useFirestore();
-  const assigneeDocRef = useMemoFirebase(() => 
-    (firestore && keyData.currentAssigneeId) ? doc(firestore, 'user_profiles', keyData.currentAssigneeId) : null
-  , [firestore, keyData.currentAssigneeId]);
-  
-  const { data: assigneeProfile, isLoading: isAssigneeLoading } = useDoc<any>(assigneeDocRef);
+  useEffect(() => { 
+    setMounted(true); 
+  }, []);
+
+  useEffect(() => {
+    if (!keyData.currentAssigneeId) {
+      setAssigneeProfile(null);
+      return;
+    }
+
+    const fetchAssignee = async () => {
+      setIsAssigneeLoading(true);
+      try {
+        const res = await api.users[':id'].$get({
+          param: { id: keyData.currentAssigneeId! }
+        });
+        const data = await res.json();
+        if (data && !('error' in data)) {
+          setAssigneeProfile(data);
+        }
+      } catch (err) {
+        console.error("Error fetching assignee:", err);
+      } finally {
+        setIsAssigneeLoading(false);
+      }
+    };
+
+    fetchAssignee();
+  }, [keyData.currentAssigneeId]);
+
+  const { toast } = useToast();
+  const { user } = useUser();
+
+  const handleDeleteKey = async () => {
+    try {
+      await api.keys[':id'].$delete({
+        param: { id: keyData.id }
+      });
+
+      if (user) {
+        await api.logs.$post({
+          json: {
+            type: 'INVENTORY',
+            message: `Admin Override: Key ${keyData.name} was DELETED from inventory.`,
+            userId: user.id,
+            userName: user.user_metadata?.full_name || 'Admin',
+          }
+        });
+      }
+
+      toast({
+        title: "Key Deleted",
+        description: `${keyData.name} has been removed from the system.`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Could not remove key from inventory.",
+      });
+    }
+  };
 
   const statusConfig: Record<KeyStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     available: { label: "Available", variant: "secondary" },
@@ -103,13 +173,40 @@ export function KeyCard({ keyData, isAdmin }: KeyCardProps) {
               </div>
               
               {isAdmin && (
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary rounded-full">
-                    <RotateCcw size={16} />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500 rounded-full">
-                    <Trash2 size={16} />
-                  </Button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <EditKeyDialog 
+                    keyData={{ 
+                      ...keyData, 
+                      pegIndex: keyData.pegIndex ?? undefined 
+                    }} 
+                  />
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500 rounded-full transition-colors">
+                        <Trash2 size={16} />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-bold text-slate-900 line-clamp-1">
+                          Delete {keyData.name}?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                          This will permanently remove the key from inventory and clear all associated checkout history. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel className="h-12 rounded-xl border-slate-200 font-bold hover:bg-slate-50">Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteKey}
+                          className="h-12 rounded-xl bg-rose-500 hover:bg-rose-600 font-bold shadow-lg shadow-rose-200"
+                        >
+                          Delete Key
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               )}
             </div>

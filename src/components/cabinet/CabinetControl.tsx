@@ -4,26 +4,52 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Lock, Unlock, Loader2, DoorOpen, DoorClosed, AlertCircle } from 'lucide-react';
-import { useFirestore, useUser, useDoc, doc, unlockCabinetStatus } from '@/firebase';
+import { useEffect } from 'react';
+import { useUser } from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { CabinetStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
 export function CabinetControl() {
-  const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const [status, setStatus] = useState<CabinetStatus | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const cabinetRef = doc(firestore!, 'cabinet_status', 'main');
-  const { data: status, isLoading } = useDoc<CabinetStatus>(cabinetRef);
+  const fetchStatus = async () => {
+    try {
+      const res = await api['cabinet-status'].$get();
+      const data = (await res.json()) as any;
+      if (data && !('error' in data)) {
+        setStatus(data as CabinetStatus);
+      }
+    } catch (err) {
+      console.error("Error fetching cabinet status:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleUnlock = async () => {
-    if (!firestore || !user) return;
+    if (!user) return;
     
     setIsUnlocking(true);
     try {
-      await unlockCabinetStatus(firestore, user.uid, user.displayName || 'User');
+      await api.unlock.$post({
+        json: {
+          userId: user.id,
+          userName: user.user_metadata?.full_name || 'Anonymous User'
+        }
+      });
+
       toast({
         title: "Unlock Requested",
         description: "ESP32 has been notified. The solenoid will retract shortly.",

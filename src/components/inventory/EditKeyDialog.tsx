@@ -21,16 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Pencil } from 'lucide-react';
-import { 
-  useFirestore, 
-  useDoc, 
-  updateDocumentNonBlocking, 
-  useMemoFirebase, 
-  useUser, 
-  addDocumentNonBlocking,
-  doc,
-  collection
-} from '@/firebase';
+import { useUser } from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 import { Key, KeyStatus } from '@/lib/types';
 
@@ -46,26 +38,15 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
   const [pegIndex, setPegIndex] = useState(keyData.pegIndex !== undefined && keyData.pegIndex !== null ? (keyData.pegIndex + 1).toString() : '');
   const [status, setStatus] = useState<KeyStatus>(keyData.status);
   
-  const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
 
-  const settingsDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'settings', 'global');
-  }, [firestore]);
+  const categories = ['Workshop', 'Room', 'Machine'];
+  const pegCount = 10;
 
-  const { data: settings } = useDoc<any>(settingsDocRef);
-
-  const categories = settings?.categories && Array.isArray(settings.categories) 
-    ? settings.categories 
-    : ['Workshop', 'Room', 'Machine'];
-
-  const pegCount = settings?.pegCount || 10;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !location || !firestore) return;
+    if (!name || !location) return;
 
     const numericPegIndex = pegIndex ? parseInt(pegIndex) - 1 : null;
     
@@ -78,39 +59,45 @@ export function EditKeyDialog({ keyData }: EditKeyDialogProps) {
       return;
     }
 
-    const keyRef = doc(firestore, 'keys', keyData.id);
-    
-    const updateData: any = {
-      keyIdentifier: name,
-      description: type,
-      location: location,
-      pegIndex: numericPegIndex,
-      currentStatus: status,
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const updateData: any = {
+        name: name,
+        keyIdentifier: name,
+        description: type,
+        location: location,
+        pegIndex: numericPegIndex as any,
+        status: status,
+      };
 
-    if (status === 'available') {
-      updateData.lastAssignedToUserId = null;
-    }
+      await api.keys[':id'].$patch({
+        param: { id: keyData.id },
+        json: updateData
+      });
 
-    updateDocumentNonBlocking(keyRef, updateData);
+      if (status !== keyData.status && user) {
+        await api.logs.$post({
+          json: {
+            type: 'INVENTORY',
+            message: `Admin Override: Status of ${name} manually changed from ${keyData.status} to ${status}`,
+            userId: user.id,
+            userName: user.user_metadata?.full_name || 'Admin',
+          }
+        });
+      }
 
-    if (status !== keyData.status && user) {
-      addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-        type: 'INVENTORY',
-        message: `Admin Override: Status of ${name} manually changed from ${keyData.status} to ${status}`,
-        userId: user.uid,
-        userName: user.displayName || 'Admin',
-        timestamp: new Date().toISOString()
+      toast({
+        title: "Update Success",
+        description: `${name} has been updated.`,
+      });
+
+      setOpen(false);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save key changes.",
       });
     }
-
-    toast({
-      title: "Update Success",
-      description: `${name} has been updated.`,
-    });
-
-    setOpen(false);
   };
 
   return (

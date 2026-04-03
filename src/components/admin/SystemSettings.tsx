@@ -22,11 +22,10 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useFirestore, setDocumentNonBlocking, doc } from '@/firebase';
+import { api } from '@/lib/hono-client';
 
 export function SystemSettings() {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPushingOTA, setIsPushingOTA] = useState(false);
@@ -39,17 +38,14 @@ export function SystemSettings() {
   };
 
   const handlePushOTA = async () => {
-    if (!firestore) return;
     setIsPushingOTA(true);
     
     try {
-      const otaUrl = "https://keyflow-pro.web.app/firmware/latest.bin";
-      const commandRef = doc(firestore, 'commands', 'cabinet');
+      const otaUrl = `${window.location.origin}/firmware/latest.bin`;
       
-      await setDocumentNonBlocking(commandRef, {
-        otaUrl: otaUrl,
-        timestamp: new Date().toISOString()
-      }, { merge: true });
+      await api.ota.$post({
+        json: { otaUrl }
+      });
 
       toast({ 
         title: "OTA Dispatched", 
@@ -70,7 +66,7 @@ export function SystemSettings() {
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
-      toast({ title: "Hub Synced", description: "CircuitPython policies updated." });
+      toast({ title: "Hub Synced", description: "Cabinet policies updated." });
     }, 800);
   };
 
@@ -120,9 +116,9 @@ export function SystemSettings() {
             </div>
 
             <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100 flex flex-col gap-2">
-              <h4 className="text-[10px] font-black uppercase text-amber-600">Manual Staging required</h4>
+              <h4 className="text-[10px] font-black uppercase text-amber-600">Staging Required</h4>
               <p className="text-[10px] text-amber-700 leading-tight">
-                Web browsers cannot write to your local files. After compiling, manually move your <code className="bg-white px-1">.bin</code> to <code className="bg-white px-1">public/firmware/latest.bin</code>.
+                Web browsers cannot write to your local files. Copy your <code className="bg-white px-1">.bin</code> to <code className="bg-white px-1">public/firmware/latest.bin</code> before deploying.
               </p>
             </div>
 
@@ -157,9 +153,9 @@ export function SystemSettings() {
             <li>Open <span className="text-primary font-bold">esp32-firmware.ino</span> in Arduino IDE.</li>
             <li>Select <b>Sketch ➔ Export Compiled Binary</b>.</li>
             <li>Copy the <span className="text-primary font-bold">.bin</span> file to <code className="bg-slate-100 px-1 rounded">public/firmware/latest.bin</code> in this project.</li>
-            <li>Run <code className="bg-slate-100 px-1 rounded text-primary font-bold">firebase deploy</code> to host the update at:</li>
-            <div className="bg-slate-900 text-slate-100 p-2 rounded-lg mt-2 font-mono overflow-x-auto">
-              https://keyflow-pro.web.app/firmware/latest.bin
+            <li>Deploy to Vercel to host the update at:</li>
+            <div className="bg-slate-900 text-slate-100 p-2 rounded-lg mt-2 font-mono overflow-x-auto text-[10px]">
+              {mounted && `${window.location.origin}/firmware/latest.bin`}
             </div>
           </ol>
         </CardContent>

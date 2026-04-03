@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
-import { useFirestore, useDoc, addDocumentNonBlocking, useMemoFirebase, collection, doc } from '@/firebase';
+import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 
 export function AddKeyDialog() {
@@ -30,25 +30,14 @@ export function AddKeyDialog() {
   const [type, setType] = useState('Room');
   const [location, setLocation] = useState('');
   const [pegIndex, setPegIndex] = useState('');
-  const firestore = useFirestore();
   const { toast } = useToast();
 
-  const settingsDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'settings', 'global');
-  }, [firestore]);
+  const categories = ['Workshop', 'Room', 'Machine'];
+  const pegCount = 10;
 
-  const { data: settings } = useDoc<any>(settingsDocRef);
-
-  const categories = settings?.categories && Array.isArray(settings.categories) 
-    ? settings.categories 
-    : ['Workshop', 'Room', 'Machine'];
-
-  const pegCount = settings?.pegCount || 10;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !location || !firestore) return;
+    if (!name || !location) return;
 
     const numericPegIndex = pegIndex ? parseInt(pegIndex) - 1 : null;
     
@@ -61,26 +50,33 @@ export function AddKeyDialog() {
       return;
     }
 
-    const keysCollection = collection(firestore, 'keys');
-    
-    addDocumentNonBlocking(keysCollection, {
-      keyIdentifier: name,
-      description: type,
-      location: location,
-      pegIndex: numericPegIndex,
-      currentStatus: 'available',
-      createdAt: new Date().toISOString()
-    });
+    try {
+      await api.keys.$post({
+        json: {
+          keyIdentifier: name,
+          description: type,
+          location: location,
+          pegIndex: numericPegIndex as any,
+          status: 'available',
+        }
+      });
 
-    toast({
-      title: "Key Registered",
-      description: `${name} has been added to the inventory.`,
-    });
+      toast({
+        title: "Key Registered",
+        description: `${name} has been added to the inventory.`,
+      });
 
-    setOpen(false);
-    setName('');
-    setLocation('');
-    setPegIndex('');
+      setOpen(false);
+      setName('');
+      setLocation('');
+      setPegIndex('');
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Could not add key to inventory.",
+      });
+    }
   };
 
   return (

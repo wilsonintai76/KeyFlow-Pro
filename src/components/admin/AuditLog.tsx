@@ -1,24 +1,33 @@
 "use client";
 
-import { useCollection, useFirestore, useMemoFirebase, collection, query, orderBy, limit } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/hono-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { History, Shield, Unlock, Package, UserCog, Clock, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function AuditLog() {
-  const firestore = useFirestore();
+  const [logs, setLogs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const logsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'system_logs'), 
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-  }, [firestore]);
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await api.logs.$get();
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLogs(data);
+        }
+      } catch (err) {
+        console.error("Error fetching logs:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const { data: logs, isLoading } = useCollection<any>(logsQuery);
+    fetchLogs();
+  }, []);
 
   const getLogIcon = (type: string) => {
     switch (type) {
