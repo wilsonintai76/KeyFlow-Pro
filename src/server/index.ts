@@ -369,6 +369,27 @@ const routes = app
     if (error) return c.json({ error: error.message }, 500)
     return c.json({ success: true, user: data })
   })
+  .get('/cabinet-status', async (c) => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('hardware_commands')
+      .select('*')
+      .eq('id', 'cabinet')
+      .single()
+      
+    if (error && error.code !== 'PGRST116') return c.json({ error: error.message }, 500)
+    
+    const { data: triggers, error: tError } = await supabase
+      .from('hardware_triggers')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      
+    return c.json({
+      ...(data || {}),
+      lastTrigger: triggers?.[0] || null
+    })
+  })
 
 export type AppType = typeof routes
 export const GET = handle(app)
