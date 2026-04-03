@@ -2,9 +2,9 @@ import { hc } from 'hono/client'
 import { AppType } from '@/server'
 
 const client = hc<AppType>(
-  typeof window !== 'undefined'
+  (typeof window !== 'undefined'
     ? window.location.origin
-    : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/api'
 )
 
-export const api = client.api
+export const api = client as any

@@ -5,7 +5,7 @@ import { zValidator } from '@hono/zod-validator'
 
 import { createClient } from '@/lib/supabase/server'
 
-const app = new Hono().basePath('/api')
+const app = new Hono()
 
 // Example Route with HonoRPC and Zod Validation
 const routes = app
