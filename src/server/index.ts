@@ -353,6 +353,22 @@ const routes = app
       })
     }
   )
+  .post('/setup/admin', async (c) => {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update({ role: 'admin', updatedAt: new Date().toISOString() })
+      .eq('id', user.id)
+      .select()
+      .single()
+      
+    if (error) return c.json({ error: error.message }, 500)
+    return c.json({ success: true, user: data })
+  })
 
 export type AppType = typeof routes
 export const GET = handle(app)

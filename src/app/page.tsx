@@ -271,6 +271,27 @@ export default function Home() {
             </div>
           </div>
           <UserProfileDialog userId={user.id} />
+          {userRole !== 'admin' && (
+            <Button 
+              variant="outline" 
+              className="w-full border-blue-100 text-blue-600 rounded-2xl h-14 font-black flex items-center gap-2"
+              onClick={async () => {
+                try {
+                  const res = await api.setup.admin.$post();
+                  const data = await res.json();
+                  if (!('error' in data)) {
+                    setProfile(data.user);
+                    toast({ title: "Admin Access Granted", description: "Refresh page to see admin tools." });
+                  }
+                } catch (err) {
+                  toast({ title: "Setup Failed", variant: "destructive" });
+                }
+              }}
+            >
+              <Sparkles size={18} />
+              BECOME ADMIN
+            </Button>
+          )}
           <ReportProblemDialog />
           <Button variant="outline" className="w-full border-rose-100 text-rose-500 rounded-2xl h-14 font-black" onClick={() => signOut()}>
             SIGN OUT

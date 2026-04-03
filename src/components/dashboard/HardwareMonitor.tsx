@@ -157,11 +157,13 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
       )}
       
       {!isOnline && mounted && (
-        <div className="flex items-center gap-2 px-2 text-rose-500 bg-rose-50/50 py-3 rounded-2xl border border-rose-100 border-dashed">
-          <AlertCircle size={16} />
+        <div className="flex items-center gap-3 px-4 text-rose-600 bg-rose-50 py-5 rounded-[2rem] border-2 border-rose-200 border-dashed animate-pulse">
+          <div className="bg-rose-100 p-2 rounded-xl">
+            <AlertCircle size={24} className="stroke-[2.5]" />
+          </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase">Hardware signal lost</span>
-            <span className="text-[9px] opacity-70">Controller is not reporting heartbeat.</span>
+            <span className="text-sm font-black uppercase tracking-tight leading-tight">CABINET SYSTEM OFFLINE</span>
+            <span className="text-[10px] font-bold opacity-80 mt-0.5">ESP32 Signal Lost • Verify Power & WiFi</span>
           </div>
         </div>
       )}
