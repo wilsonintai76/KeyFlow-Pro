@@ -9,6 +9,7 @@ import { Phone, Save, Loader2, User, Hash, GraduationCap, BadgeCheck, Mail } fro
 import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfile } from '@/lib/types';
+import { useAuth } from '@/lib/auth-provider';
 
 interface UserProfileDialogProps {
   userId: string;
@@ -16,6 +17,7 @@ interface UserProfileDialogProps {
 
 export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +27,16 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const [studentClass, setStudentClass] = useState('');
   const [staffId, setStaffId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state with profile OR auth metadata on initial load
+  useEffect(() => {
+    if (profile) {
+      if (!fullName && profile.fullName) setFullName(profile.fullName);
+      else if (!fullName && user?.user_metadata?.full_name) setFullName(user.user_metadata.full_name);
+    } else if (!fullName && user?.user_metadata?.full_name) {
+      setFullName(user.user_metadata.full_name);
+    }
+  }, [profile, user, fullName]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -141,9 +153,9 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={16} />
             <Input 
-              value={profile?.email || ''} 
+              value={profile?.email || user?.email || ''} 
               disabled 
-              className="bg-slate-100/50 border-slate-100 h-11 pl-10 text-muted-foreground font-medium italic cursor-not-allowed" 
+              className="bg-slate-100/50 border-slate-100 h-11 pl-10 text-muted-foreground font-medium italic cursor-not-allowed uppercase" 
             />
           </div>
         </div>

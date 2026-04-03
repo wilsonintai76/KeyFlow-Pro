@@ -79,6 +79,19 @@ export default function Home() {
         
         if (data && !('error' in data)) {
           setProfile(data);
+          
+          // Silent Repair: If database record is missing basic info available from Google
+          const needsRepair = !data.fullName || !data.email;
+          if (needsRepair && user) {
+            const repairRes = await api.profile.$patch({
+              json: {
+                fullName: data.fullName || user.user_metadata?.full_name || 'Guest User',
+                email: data.email || user.email || '',
+              }
+            });
+            const repairedData = await repairRes.json();
+            if (!('error' in repairedData)) setProfile(repairedData);
+          }
         } else {
           // Create profile if not exists
           const email = user.email?.toLowerCase();
