@@ -4,53 +4,40 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Database, CheckCircle2, AlertCircle } from 'lucide-react';
-import { 
-  useFirestore, 
-  doc, 
-  collection, 
-  setDocumentNonBlocking, 
-  addDocumentNonBlocking 
-} from '@/firebase';
+import { api } from '@/lib/hono-client';
 import { INITIAL_KEYS, INITIAL_ASSIGNEES, MOCK_USER } from '@/lib/mock-data';
 
 export default function SeedPage() {
   const [status, setStatus] = useState<'idle' | 'seeding' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
-  const firestore = useFirestore();
-
   const handleSeed = async () => {
-    if (!firestore) return;
     setStatus('seeding');
     setMessage('Initializing database...');
 
     try {
       // 1. Seed User Profiles
       for (const assignee of INITIAL_ASSIGNEES) {
-         const profileRef = doc(firestore, 'user_profiles', assignee.id);
-         setDocumentNonBlocking(profileRef, {
-           ...assignee,
-           role: assignee.id === MOCK_USER.uid ? 'admin' : 'staff',
-           createdAt: new Date().toISOString()
-         }, { merge: true });
+         await api.profile.$post({
+           json: {
+             fullName: assignee.fullName,
+             email: assignee.email,
+             role: assignee.id === MOCK_USER.uid ? 'admin' : 'staff',
+           }
+         });
       }
 
       // 2. Seed Keys
       for (const key of INITIAL_KEYS) {
-        const keyRef = doc(firestore, 'keys', key.id);
-        setDocumentNonBlocking(keyRef, {
-          ...key,
-          currentStatus: key.currentStatus || 'available',
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+        await api.keys.$post({
+          json: {
+            keyIdentifier: key.keyIdentifier,
+            description: key.description,
+            location: key.location,
+            status: (key.currentStatus || 'available') as any,
+            pegIndex: key.pegIndex
+          }
+        });
       }
-
-      // 3. Seed Initial System Settings
-      const settingsRef = doc(firestore, 'system', 'config');
-      setDocumentNonBlocking(settingsRef, {
-        pegCount: 20,
-        categories: ['Workshop', 'Room', 'Machine', 'Office'],
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
 
       setStatus('success');
       setMessage('Database successfully initialized with 5 keys and 3 user profiles.');

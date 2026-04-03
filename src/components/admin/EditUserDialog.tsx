@@ -21,14 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Pencil, Loader2, Save, Hash, GraduationCap, BadgeCheck } from 'lucide-react';
-import { 
-  useFirestore, 
-  updateDocumentNonBlocking, 
-  useUser, 
-  addDocumentNonBlocking,
-  doc,
-  collection
-} from '@/firebase';
+import { useUser } from '@/lib/auth-provider';
+import { api } from '@/lib/hono-client';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfile, UserRole } from '@/lib/types';
 
@@ -47,13 +41,12 @@ export function EditUserDialog({ userProfile }: EditUserDialogProps) {
   const [role, setRole] = useState<UserRole>(userProfile.role);
   const [isSaving, setIsSaving] = useState(false);
   
-  const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !firestore) return;
+    if (!fullName || !email) return;
 
     // Validation
     if (role === 'student') {
@@ -79,40 +72,49 @@ export function EditUserDialog({ userProfile }: EditUserDialogProps) {
     }
 
     setIsSaving(true);
-    const userRef = doc(firestore, 'user_profiles', userProfile.id);
     
-    const updateData: any = {
-      fullName,
-      email,
-      phoneNumber,
-      role,
-      registrationNumber: role === 'student' ? (registrationNumber || null) : null,
-      studentClass: role === 'student' ? (studentClass || null) : null,
-      staffId: (role === 'staff' || role === 'admin') ? (staffId || null) : null,
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const updateData: any = {
+        fullName,
+        email,
+        phoneNumber,
+        role,
+        registrationNumber: role === 'student' ? (registrationNumber || null) : null,
+        studentClass: role === 'student' ? (studentClass || null) : null,
+        staffId: (role === 'staff' || role === 'admin') ? (staffId || null) : null,
+      };
 
-    updateDocumentNonBlocking(userRef, updateData);
-
-    // Log the changes if role changed
-    if (role !== userProfile.role && currentUser) {
-      addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-        type: 'USER_MGMT',
-        message: `Admin Override: Role of ${fullName} changed from ${userProfile.role} to ${role}`,
-        userId: currentUser.uid,
-        userName: currentUser.displayName || 'Admin',
-        timestamp: new Date().toISOString()
+      await api.users[':id'].$patch({
+        param: { id: userProfile.id },
+        json: updateData
       });
-    }
 
-    setTimeout(() => {
-      setIsSaving(false);
+      // Log the changes if role changed
+      if (role !== userProfile.role && currentUser) {
+        await api.logs.$post({
+          json: {
+            type: 'USER_MGMT',
+            message: `Admin Override: Role of ${fullName} changed from ${userProfile.role} to ${role}`,
+            userId: currentUser.id,
+            userName: currentUser.user_metadata?.full_name || 'Admin',
+          }
+        });
+      }
+
       toast({
         title: "User Updated",
         description: `Profile for ${fullName} has been saved.`,
       });
       setOpen(false);
-    }, 500);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save user changes.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

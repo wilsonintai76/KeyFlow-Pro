@@ -180,6 +180,32 @@ const routes = app
     if (error && error.code !== 'PGRST116') return c.json({ error: error.message }, 500)
     return c.json(user || null)
   })
+  .patch('/users/:id',
+    zValidator('json', z.object({
+      fullName: z.string().optional(),
+      email: z.string().optional(),
+      phoneNumber: z.string().nullable().optional(),
+      role: z.enum(['guest', 'student', 'staff', 'admin']).optional(),
+      registrationNumber: z.string().nullable().optional(),
+      studentClass: z.string().nullable().optional(),
+      staffId: z.string().nullable().optional(),
+    })),
+    async (c) => {
+      const id = c.req.param('id')
+      const body = c.req.valid('json')
+      const supabase = await createClient()
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({ ...body, updatedAt: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+        
+      if (error) return c.json({ error: error.message }, 500)
+      return c.json(data)
+    }
+  )
   .delete('/users/:id', async (c) => {
     const id = c.req.param('id')
     const supabase = await createClient()

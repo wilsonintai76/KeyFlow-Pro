@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, doc } from '@/firebase';
+import { api } from '@/lib/hono-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle } from 'lucide-react';
@@ -12,23 +12,33 @@ interface HardwareMonitorProps {
 }
 
 export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
-  const firestore = useFirestore();
   const [mounted, setMounted] = useState(false);
+  const [status, setStatus] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => setMounted(true), []);
+  const fetchStatus = async () => {
+    try {
+      const res = await api['cabinet-status'].$get();
+      const data = await res.json();
+      if (data && !('error' in data)) {
+        setStatus(data);
+      }
+    } catch (err) {
+      console.error("Hardware poll error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const statusDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'cabinet_status', 'main');
-  }, [firestore]);
+  useEffect(() => {
+    setMounted(true);
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const settingsDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'settings', 'global');
-  }, [firestore]);
-
-  const { data: status, isLoading: isStatusLoading } = useDoc<any>(statusDocRef);
-  const { data: settings, isLoading: isSettingsLoading } = useDoc<any>(settingsDocRef);
+  const isStatusLoading = isLoading;
+  const isSettingsLoading = false;
 
   if (isStatusLoading || isSettingsLoading) {
     return (
@@ -41,7 +51,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
   const isOnline = mounted && status?.lastHeartbeat && (new Date().getTime() - new Date(status.lastHeartbeat).getTime() < 60000);
   const isDoorOpen = status?.doorOpen === true;
   const pegStates = status?.pegStates || {};
-  const pegCount = settings?.pegCount || 10;
+  const pegCount = 10;
 
   if (minimalist) {
     return (

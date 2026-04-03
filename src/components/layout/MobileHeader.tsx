@@ -1,7 +1,7 @@
 'use client';
 
 import { Key } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser } from '@/lib/auth-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface MobileHeaderProps {
@@ -36,9 +36,9 @@ export function MobileHeader({ onProfileClick }: MobileHeaderProps) {
         aria-label="View Profile"
       >
         <Avatar className="w-9 h-9 border-2 border-white shadow-sm rounded-xl">
-          {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} className="rounded-xl" />}
+          {user?.user_metadata?.avatar_url && <AvatarImage src={user.user_metadata.avatar_url} alt={user.user_metadata.full_name || 'User'} className="rounded-xl" />}
           <AvatarFallback className="bg-slate-100 text-[11px] font-black text-primary rounded-xl">
-            {getInitials(user?.displayName || null)}
+            {getInitials(user?.user_metadata?.full_name || null)}
           </AvatarFallback>
         </Avatar>
       </button>

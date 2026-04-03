@@ -1,6 +1,6 @@
 {
   "name": "nextn",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -40,7 +40,6 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
     "hono": "^4.12.10",
     "lucide-react": "^0.475.0",
     "next": "15.5.9",
