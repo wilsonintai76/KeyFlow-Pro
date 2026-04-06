@@ -1,26 +1,20 @@
 
 "use client";
 
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useRTDB } from '@/firebase/rtdb';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { History, Shield, Unlock, Package, UserCog, Clock, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function AuditLog() {
-  const firestore = useFirestore();
+  const { data: logsData, loading: isLoading } = useRTDB<Record<string, any>>('log');
 
-  const logsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'system_logs'), 
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-  }, [firestore]);
-
-  const { data: logs, isLoading } = useCollection<any>(logsQuery);
+  // Convert RTDB object to sorted array for display
+  const logs = logsData ? Object.entries(logsData).map(([id, val]) => ({
+    id,
+    ...val
+  })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) : [];
 
   const getLogIcon = (type: string) => {
     switch (type) {

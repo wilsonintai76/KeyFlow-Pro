@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "live": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "log": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$log_id": {
+        ".validate": "!data.exists() || (data.child('timestamp').val() == newData.child('timestamp').val())"
+      }
+    }
+  }
+}

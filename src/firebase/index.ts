@@ -5,6 +5,8 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 /**
  * Initializes Firebase with explicit configuration to resolve auth/api-key errors.
@@ -38,7 +40,9 @@ export function getSdks(firebaseApp: FirebaseApp) {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: firestore,
-    storage: getStorage(firebaseApp)
+    storage: getStorage(firebaseApp),
+    database: getDatabase(firebaseApp),
+    analytics: typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null
   };
 }
 

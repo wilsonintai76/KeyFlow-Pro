@@ -1,4 +1,4 @@
-# **App Name**: KeyFlow Pro
+# **App Name**: KeyMaster Pro Security Rules
 
 ## Core Features:
 

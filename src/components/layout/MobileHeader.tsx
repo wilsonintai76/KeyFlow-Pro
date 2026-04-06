@@ -25,7 +25,7 @@ export function MobileHeader({ onProfileClick }: MobileHeaderProps) {
           <Key size={20} className="stroke-[2.5]" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tight text-primary leading-none">KeyFlow</span>
+          <span className="text-xl font-black tracking-tight text-primary leading-none">KeyMaster</span>
           <span className="text-[10px] font-black text-accent uppercase tracking-widest leading-none mt-1">PRO MANAGEMENT</span>
         </div>
       </div>

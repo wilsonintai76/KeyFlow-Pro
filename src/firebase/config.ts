@@ -1,8 +1,10 @@
 export const firebaseConfig = {
-  "projectId": "studio-3599802628-88927",
-  "appId": "1:734099134013:web:f7c98c58b8f2724034bc54",
-  "apiKey": "AIzaSyATIeGTX_Y9K5DEvgv1EHfZ4OdU8NQv_N8",
-  "authDomain": "studio-3599802628-88927.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "734099134013"
+  apiKey: "AIzaSyDlHVttSl9_kpg0oSnb2H06GmO1tFUXlEk",
+  authDomain: "keymaster-pro-182e7.firebaseapp.com",
+  projectId: "keymaster-pro-182e7",
+  storageBucket: "keymaster-pro-182e7.firebasestorage.app",
+  messagingSenderId: "39167657749",
+  appId: "1:39167657749:web:05b4fb1812d073edcfcb1c",
+  measurementId: "G-SGVNQLJ1T3",
+  databaseURL: "https://keymaster-pro-182e7-default-rtdb.firebaseio.com"
 };

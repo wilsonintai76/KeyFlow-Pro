@@ -46,7 +46,7 @@ const assistantPrompt = ai.definePrompt({
   input: { schema: KeyAssignmentAssistantInputSchema },
   output: { schema: KeyAssignmentAssistantOutputSchema },
   prompt: `
-    You are the KeyFlow Pro AI Assistant. Your goal is to help staff members find the correct physical key for their tasks.
+    You are the KeyMaster Pro AI Assistant. Your goal is to help staff members find the correct physical key for their tasks.
 
     Context:
     - User Role: {{{userRole}}}

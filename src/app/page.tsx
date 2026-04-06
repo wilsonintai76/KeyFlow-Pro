@@ -28,13 +28,15 @@ import {
   setDocumentNonBlocking,
   addDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, orderBy, doc, where, limit } from 'firebase/firestore';
+import { updateLiveAction, writeLog } from '@/firebase/rtdb';
+import { collection, query, orderBy, doc, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
@@ -79,23 +81,28 @@ export default function Home() {
   useEffect(() => {
     if (!user || !firestore || isProfileLoading || profile) return;
     
-    const email = user.email?.toLowerCase();
-    const isMasterAdmin = email === 'wilsonintai76@gmail.com';
-    const isTrustedStaff = email === 'wilson@poliku.edu.my';
+    const bootstrapProfile = async () => {
+      const q = query(collection(firestore, 'user_profiles'), limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
+      
+      const email = user.email?.toLowerCase();
+      const isMasterAdmin = email === 'wilsonintai76@gmail.com';
 
-    let role = 'guest';
-    if (isMasterAdmin) role = 'admin';
-    else if (isTrustedStaff) role = 'staff';
+      let role = 'guest';
+      if (isFirstUser || isMasterAdmin) role = 'admin';
 
-    setDocumentNonBlocking(profileDocRef!, {
-      id: user.uid,
-      fullName: user.displayName || (isTrustedStaff ? 'Wilson Poliku' : 'Staff Member'),
-      email: user.email || '',
-      role: role,
-      phoneNumber: isTrustedStaff ? '+60 12-345 6789' : '',
-      createdAt: new Date().toISOString()
-    }, { merge: true });
-    
+      setDocumentNonBlocking(profileDocRef!, {
+        id: user.uid,
+        fullName: user.displayName || (isFirstUser ? 'System Admin' : 'New User'),
+        email: user.email || '',
+        role: role,
+        phoneNumber: '',
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    };
+
+    bootstrapProfile();
   }, [user, isProfileLoading, profile, firestore, profileDocRef]);
 
   const userRole = profile?.role || 'guest';
@@ -141,26 +148,27 @@ export default function Home() {
   }, [keys]);
 
   const handleUnlockCabinet = () => {
-    if (!firestore || !user || !isStaffOrAdmin) return;
+    if (!user || !isStaffOrAdmin) return;
     
-    addDocumentNonBlocking(collection(firestore, 'hardware_triggers'), {
-      action: 'UNLOCK_CABINET',
-      timestamp: new Date().toISOString(),
+    // Live Action: Trigger hardware solenoid via RTDB
+    updateLiveAction('cabinet_unlock', {
+      action: 'UNLOCK',
       userId: user.uid,
+      userName: profile?.fullName || user.displayName || 'Staff',
+      timestamp: new Date().toISOString(),
       status: 'pending'
     });
 
-    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
-      type: 'HARDWARE',
+    // Logging: Append to historical logs in RTDB
+    writeLog('HARDWARE_UNLOCK', {
       message: `Cabinet unlocked by ${profile?.fullName || user.displayName || 'Staff'}`,
       userId: user.uid,
       userName: profile?.fullName || user.displayName || 'Staff',
-      timestamp: new Date().toISOString()
     });
 
     toast({
       title: "Opening Cabinet",
-      description: "Hardware signal dispatched.",
+      description: "Live hardware signal dispatched via RTDB.",
     });
   };
 
@@ -179,11 +187,21 @@ export default function Home() {
           <KeyIcon size={64} className="stroke-[2.5]" />
         </div>
         <div className="space-y-3">
-          <h1 className="text-4xl font-black tracking-tight text-primary">KeyFlow <span className="text-accent">Pro</span></h1>
+          <h1 className="text-4xl font-black tracking-tight text-primary">KeyMaster <span className="text-accent">Pro</span></h1>
           <p className="text-muted-foreground text-sm font-medium">Intelligent staff key management.</p>
         </div>
-        <Button onClick={() => auth && initiateGoogleSignIn(auth)} className="w-full h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" variant="outline">
-          Continue with Google
+        <Button 
+          disabled={isSigningIn}
+          onClick={() => {
+            if (auth) {
+              setIsSigningIn(true);
+              initiateGoogleSignIn(auth);
+            }
+          }} 
+          className="w-full h-14 gap-3 text-base font-bold shadow-xl rounded-2xl bg-white text-slate-900 border transition-all active:scale-95" 
+          variant="outline"
+        >
+          {isSigningIn ? <Loader2 className="animate-spin text-primary" /> : "Continue with Google"}
         </Button>
       </div>
     );

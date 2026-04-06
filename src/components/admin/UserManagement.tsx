@@ -2,7 +2,8 @@
 "use client";
 
 import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { writeLog } from '@/firebase/rtdb';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,12 +36,12 @@ export function UserManagement() {
     const userRef = doc(firestore, 'user_profiles', userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     
-    addDocumentNonBlocking(collection(firestore, 'system_logs'), {
+    // Logging: Append role change to RTDB logs
+    writeLog('USER_MGMT', {
       type: 'USER_MGMT',
       message: `Role changed for ${userName} from ${oldRole} to ${newRole}`,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Admin',
-      timestamp: new Date().toISOString()
     });
 
     toast({
@@ -53,6 +54,7 @@ export function UserManagement() {
     switch (role) {
       case 'admin': return 'bg-primary text-white';
       case 'staff': return 'bg-accent text-primary';
+      case 'student': return 'bg-sky-100 text-sky-600';
       default: return 'bg-slate-100 text-slate-500';
     }
   };
@@ -125,6 +127,7 @@ export function UserManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="guest" className="text-xs">Guest</SelectItem>
+                        <SelectItem value="student" className="text-xs">Student</SelectItem>
                         <SelectItem value="staff" className="text-xs">Staff</SelectItem>
                         <SelectItem value="admin" className="text-xs">Admin</SelectItem>
                       </SelectContent>
