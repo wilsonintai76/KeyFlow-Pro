@@ -14,12 +14,24 @@ namespace FirebaseService {
   void init() {
     config.api_key = API_KEY;
     config.database_url = DATABASE_URL;
+
+    // 1. Initialize Firebase
     Firebase.begin(&config, &auth);
     Firebase.reconnectWiFi(true);
+
+    // 2. Perform Anonymous Login to satisfy 'auth != null' rules
+    Serial.println("Signing in anonymously...");
+    if (Firebase.ready()) {
+      if (!Firebase.signUp(&config, &auth, "", "")) {
+        Serial.printf("Anonymous Sign-up Failed: %s\n", config.signer.signupError.message.c_str());
+      } else {
+        Serial.println("Anonymous Sign-in Successful.");
+      }
+    }
     
-    Serial.println("Firebase Service initialized.");
+    Serial.println("Firebase Service Ready.");
     
-    // Begin RTDB Stream Listener
+    // 3. Begin RTDB Stream Listener
     if (!Firebase.RTDB.beginStream(&fbdo_stream, "/live/cabinet_unlock")) {
       Serial.println("Stream Begin Error: " + fbdo_stream.errorReason());
     }

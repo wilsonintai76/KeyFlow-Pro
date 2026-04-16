@@ -19,7 +19,7 @@ export function TransactionHistory({ transactions, keys, assignees }: HistoryPro
     const assignee = assignees.find(a => a.id === t.assigneeId);
     return (
       key?.name.toLowerCase().includes(search.toLowerCase()) ||
-      assignee?.name.toLowerCase().includes(search.toLowerCase()) ||
+      assignee?.fullName.toLowerCase().includes(search.toLowerCase()) ||
       t.keyId.toLowerCase().includes(search.toLowerCase())
     );
   }).sort((a, b) => new Date(b.checkoutDate).getTime() - new Date(a.checkoutDate).getTime());
@@ -52,7 +52,7 @@ export function TransactionHistory({ transactions, keys, assignees }: HistoryPro
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-bold text-primary">{key?.name || 'Unknown Key'}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">User: <span className="text-foreground font-medium">{assignee?.name || t.assigneeId}</span></p>
+                  <p className="text-xs text-muted-foreground">User: <span className="text-foreground font-medium">{assignee?.fullName || t.assigneeId}</span></p>
                   <div className="flex justify-between items-end pt-1">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[10px] text-muted-foreground uppercase">Checkout</span>

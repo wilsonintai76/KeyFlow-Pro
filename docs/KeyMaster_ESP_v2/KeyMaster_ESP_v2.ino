@@ -2,6 +2,7 @@
 #include "config.h"
 #include "hardware_handler.h"
 #include "firebase_handler.h"
+#include "local_server.h"
 
 unsigned long lastHeartbeat = 0;
 const long heartbeatInterval = 10000; // 10 seconds
@@ -17,7 +18,7 @@ void setup() {
   WiFiManager wm;
   wm.setConfigPortalTimeout(PORTAL_TIMEOUT);
 
-  // Manual Reset Trigger: If Master Key Pin (25) is held LOW during boot, reset WiFi.
+  // Manual Reset Trigger: If Master Key Pin (D6) is held LOW during boot, reset WiFi.
   if (Hardware::isKeyPresent()) {
     Serial.println("Reset Button Detected: Clearing WiFi Settings...");
     wm.resetSettings();
@@ -30,18 +31,26 @@ void setup() {
   }
   Serial.println("WiFi Connected Successfully.");
 
-  // 3. Initialize Firebase Services
+  // 3. Initialize Local Server (Offline Fallback)
+  LocalServer::init();
+
+  // 4. Initialize Firebase Services
   FirebaseService::init();
   
   Serial.println("System Ready.");
+  Hardware::testFeedback();
 }
 
 void loop() {
+  // 1. Handle Local HTTP Client Requests
+  LocalServer::handle();
+
+  // 2. Handle Cloud (Firebase) sync if connected
   if (Firebase.ready()) {
-    // 1. Handle Real-time Stream Triggers (Unlock)
+    // Handle Real-time Stream Triggers (Unlock)
     FirebaseService::handleUnlockStream();
 
-    // 2. Periodic Status Reporting (Heartbeat)
+    // Periodic Status Reporting (Heartbeat)
     if (millis() - lastHeartbeat > heartbeatInterval) {
       FirebaseService::reportStatus();
       lastHeartbeat = millis();

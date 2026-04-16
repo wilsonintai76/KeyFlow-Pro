@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'wilsonintai76@gmail.com';
+    }
+
+    // Allow authenticated users to read all files
+    match /{allPaths=**} {
+      allow read: if isSignedIn();
+    }
+
+    // Allow admins to write/delete all files
+    match /{allPaths=**} {
+      allow write, delete: if isAdmin();
+    }
+
+    // Allow authenticated users to upload to their own folder
+    match /users/{userId}/{allPaths=**} {
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}

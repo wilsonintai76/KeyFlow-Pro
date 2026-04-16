@@ -34,7 +34,7 @@ export function SmartAssigner({ keys, userRole }: SmartAssignerProps) {
         availableKeys: keys.map(k => ({
           keyId: k.id,
           name: k.name,
-          type: k.type,
+          type: k.type || 'General',
           location: k.location,
           status: k.status
         }))

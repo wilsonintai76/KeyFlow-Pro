@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, DoorOpen, DoorClosed, Wifi, AlertCircle, Circle, Cpu } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { BlinkingLED } from '@/components/dashboard/BlinkingLED';
 
 interface HardwareMonitorProps {
   minimalist?: boolean;
@@ -55,6 +56,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
                 <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </Badge>
+                <BlinkingLED color={isOnline ? "green" : "red"} size="sm" speed={500} label="TEST" />
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{pegCount} SLOTS</span>
               </div>
             </div>
@@ -89,6 +91,7 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
                 <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold ${isOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50/50' : 'border-slate-200 text-slate-400'}`}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </Badge>
+                <BlinkingLED color={isOnline ? "green" : "red"} size="sm" speed={500} label="TEST" />
                 {status?.wifiSignal && (
                   <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                     <Wifi size={10} />

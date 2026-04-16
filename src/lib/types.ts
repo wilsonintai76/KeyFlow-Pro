@@ -1,21 +1,43 @@
+export type UserRole = 'guest' | 'student' | 'staff' | 'admin';
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  phoneNumber?: string;
+  registrationNumber?: string;
+  studentClass?: string;
+  staffId?: string;
+}
 
 export type KeyStatus = 'available' | 'checked_out' | 'overdue';
 
 export interface Key {
   id: string;
   name: string;
-  type: string;
+  type?: string;
   location: string;
   status: KeyStatus;
   currentAssigneeId?: string;
   lastCheckoutTimestamp?: string;
   pegIndex?: number;
   lastServiceDate?: string;
+  // Fields used in seeding/admin that should be optional or aligned
+  keyIdentifier?: string;
+  description?: string;
+  currentStatus?: KeyStatus;
+}
+
+export interface CabinetStatus {
+  doorOpen: boolean;
+  locked: boolean;
+  lastUserName?: string;
 }
 
 export interface Assignee {
   id: string;
-  name: string;
+  fullName: string;
   department: string;
   email: string;
   phoneNumber?: string;
