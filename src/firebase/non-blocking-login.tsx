@@ -17,12 +17,9 @@ export function initiateAnonymousSignIn(authInstance: Auth): void {
 /** Initiate Google sign-in (non-blocking). */
 export function initiateGoogleSignIn(authInstance: Auth): void {
   const provider = new GoogleAuthProvider();
-  // Using signInWithPopup by default, but adding catch to handle common errors (e.g. mobile Safari)
+  // Using signInWithPopup for immediate session capture and dashboard entry
   signInWithPopup(authInstance, provider).catch((error) => {
     console.error("Popup failed:", error);
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-by-user') {
-      // Potentially fall back to redirect or alert user
-    }
   });
 }
 

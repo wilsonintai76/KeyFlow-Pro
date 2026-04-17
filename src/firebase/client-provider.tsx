@@ -3,8 +3,7 @@
 import React, { useMemo, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { setPersistence, browserSessionPersistence } from 'firebase/auth';
-import { enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
+import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -17,28 +16,18 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   }, []);
 
   useEffect(() => {
-    // Set persistence to session so user logs out when closing the browser/app
+    // Set persistence to Local so the session survives page refreshes and browser restarts
     if (firebaseServices.auth) {
-      setPersistence(firebaseServices.auth, browserSessionPersistence).catch((error) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn("Failed to set auth persistence:", error);
-        }
-      });
+      console.log("FirebaseClientProvider: Configuring Auth persistence...");
+      setPersistence(firebaseServices.auth, browserLocalPersistence)
+        .then(() => {
+          console.log("FirebaseClientProvider: Persistence set to browserLocalPersistence.");
+        })
+        .catch((error) => {
+          console.error("FirebaseClientProvider: Failed to set auth persistence:", error);
+        });
     }
-
-    // Enable Firestore Offline Persistence for PWA support
-    if (firebaseServices.firestore) {
-      enableMultiTabIndexedDbPersistence(firebaseServices.firestore).catch((err) => {
-        if (process.env.NODE_ENV !== 'production') {
-          if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open');
-          } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser not supported');
-          }
-        }
-      });
-    }
-  }, [firebaseServices.auth, firebaseServices.firestore]);
+  }, [firebaseServices.auth]);
 
   return (
     <FirebaseProvider

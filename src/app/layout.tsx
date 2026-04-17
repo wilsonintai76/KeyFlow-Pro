@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'KeyMaster Pro | Intelligent Key Management',
   description: 'Streamlined physical key tracking and AI-powered assignment assistance.',
-  manifest: '/manifest',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

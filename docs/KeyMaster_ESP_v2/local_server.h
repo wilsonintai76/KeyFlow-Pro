@@ -5,6 +5,9 @@
 #include <ESPmDNS.h>
 #include "hardware_handler.h"
 
+// Forward declaration of the global reset function
+extern void resetWiFiAndReboot();
+
 namespace LocalServer {
   WebServer server(80);
   const char* hostname = "keymaster";
@@ -43,6 +46,14 @@ namespace LocalServer {
     server.send(204);
   }
 
+  void handleResetWiFi() {
+    Serial.println("Local WiFi Reset Request Received.");
+    sendCORS(200, "application/json", "{\"status\":\"success\",\"message\":\"WiFi Resetting... Device will reboot into Setup Portal.\"}");
+    delay(1000);
+    
+    resetWiFiAndReboot();
+  }
+
   void init() {
     // 1. Initialize mDNS
     if (MDNS.begin(hostname)) {
@@ -56,6 +67,7 @@ namespace LocalServer {
     server.on("/", HTTP_GET, handleRoot);
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/unlock", HTTP_GET, handleUnlock);
+    server.on("/reset_wifi", HTTP_GET, handleResetWiFi);
     server.on("/unlock", HTTP_OPTIONS, handleOptions); // Handle pre-flight
 
     server.begin();

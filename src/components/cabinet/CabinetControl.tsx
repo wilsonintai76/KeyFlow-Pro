@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Lock, Unlock, Loader2, DoorOpen, DoorClosed, AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useUser } from '@/lib/auth-provider';
-import { api } from '@/lib/hono-client';
+import { useRTDB, updateLiveAction } from '@/firebase/rtdb';
 import { CabinetStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -16,49 +16,45 @@ export function CabinetControl() {
   const { toast } = useToast();
   const [status, setStatus] = useState<CabinetStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { data: rtdbStatus, loading: isRtdbLoading } = useRTDB<any>('live/cabinet');
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const fetchStatus = async () => {
-    try {
-      const res = await api['cabinet-status'].$get();
-      const data = (await res.json()) as any;
-      if (data && !('error' in data)) {
-        setStatus(data as CabinetStatus);
-      }
-    } catch (err) {
-      console.error("Error fetching cabinet status:", err);
-    } finally {
+  useEffect(() => {
+    if (rtdbStatus) {
+      setStatus(rtdbStatus as CabinetStatus);
       setIsLoading(false);
     }
-  };
+  }, [rtdbStatus]);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    // If RTDB loading takes too long, stop loading (or handle accordingly)
+    if (!isRtdbLoading && !rtdbStatus) {
+      setIsLoading(false);
+    }
+  }, [isRtdbLoading, rtdbStatus]);
 
   const handleUnlock = async () => {
     if (!user) return;
     
     setIsUnlocking(true);
     try {
-      await api.unlock.$post({
-        json: {
-          userId: user.id,
-          userName: user.user_metadata?.full_name || 'Anonymous User'
-        }
+      await updateLiveAction('cabinet_unlock', {
+        action: 'UNLOCK',
+        userId: user.id || (user as any).uid,
+        userName: user.user_metadata?.full_name || user.email || 'Staff',
+        timestamp: new Date().toISOString(),
+        status: 'pending'
       });
 
       toast({
         title: "Unlock Requested",
-        description: "ESP32 has been notified. The solenoid will retract shortly.",
+        description: "ESP32 has been notified via RTDB.",
       });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Communication Error",
-        description: "Failed to send unlock command to hardware.",
+        description: "Failed to update RTDB trigger.",
       });
     } finally {
       setTimeout(() => setIsUnlocking(false), 2000);

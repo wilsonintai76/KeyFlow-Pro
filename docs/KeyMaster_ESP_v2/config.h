@@ -17,8 +17,15 @@ const int PEG_PINS[] = {7, 8, 9, 10, 14, 21, 47, 48, 38, 39};
 
 /* 4. Built-in Maker Features */
 const int STATUS_LED_PIN = 2;
+#ifndef RGB_LED_PIN
 const int RGB_LED_PIN = 46;     // WS2812B RGB LED
+#endif
 const int BUZZER_PIN = 12;
-const int VPERIPHERAL_PIN = 11; // Enable peripheral power (Active HIGH)
+#define VPERIPHERAL_PIN 11 // Enable peripheral power (Active HIGH)
+
+/* 5. Time Configuration (NTP) */
+#define NTP_SERVER "pool.ntp.org"
+#define GMT_OFFSET_SEC 28800 // GMT+8 (8 * 3600)
+#define DAYLIGHT_OFFSET_SEC 0
 
 #endif

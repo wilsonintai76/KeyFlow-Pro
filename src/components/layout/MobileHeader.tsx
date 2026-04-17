@@ -25,7 +25,12 @@ export function MobileHeader({ onProfileClick }: MobileHeaderProps) {
           <Key size={20} className="stroke-[2.5]" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tight text-primary leading-none">KeyMaster</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xl font-black tracking-tight text-primary leading-none">KeyMaster</span>
+            <span className="text-[8px] bg-slate-100 px-1.5 py-0.5 rounded-full font-black text-muted-foreground/60 border border-slate-200">
+              {process.env.NEXT_PUBLIC_APP_VERSION}
+            </span>
+          </div>
           <span className="text-[10px] font-black text-accent uppercase tracking-widest leading-none mt-1">PRO MANAGEMENT</span>
         </div>
       </div>

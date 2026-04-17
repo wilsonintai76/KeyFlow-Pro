@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useRTDB } from '@/firebase/rtdb';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,17 +20,12 @@ export function HardwareMonitor({ minimalist = false }: HardwareMonitorProps) {
 
   useEffect(() => setMounted(true), []);
 
-  const statusDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'cabinet_status', 'main_cabinet');
-  }, [firestore]);
-
   const settingsDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'global');
   }, [firestore]);
 
-  const { data: status, isLoading: isStatusLoading } = useDoc<any>(statusDocRef);
+  const { data: status, loading: isStatusLoading } = useRTDB<any>('/live/cabinet');
   const { data: settings, isLoading: isSettingsLoading } = useDoc<any>(settingsDocRef);
 
   if (isStatusLoading || isSettingsLoading) return null;

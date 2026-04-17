@@ -4,39 +4,40 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Database, CheckCircle2, AlertCircle } from 'lucide-react';
-import { api } from '@/lib/hono-client';
+import { useFirestore } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { INITIAL_KEYS, INITIAL_ASSIGNEES, MOCK_USER } from '@/lib/mock-data';
 
 export default function SeedPage() {
+  const firestore = useFirestore();
   const [status, setStatus] = useState<'idle' | 'seeding' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const handleSeed = async () => {
-    setStatus('seeding');
-    setMessage('Initializing database...');
 
     try {
       // 1. Seed User Profiles
       for (const assignee of INITIAL_ASSIGNEES) {
-         await api.profile.$post({
-           json: {
-             fullName: assignee.fullName,
-             email: assignee.email,
-             role: assignee.id === MOCK_USER.uid ? 'admin' : 'staff',
-           }
-         });
+        const profileRef = doc(firestore, 'user_profiles', assignee.id);
+        await setDoc(profileRef, {
+          id: assignee.id,
+          fullName: assignee.fullName,
+          email: assignee.email,
+          role: assignee.id === MOCK_USER.uid ? 'admin' : 'staff',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
       }
 
       // 2. Seed Keys
       for (const key of INITIAL_KEYS) {
-        await api.keys.$post({
-          json: {
-            keyIdentifier: key.keyIdentifier,
-            description: key.description,
-            location: key.location,
-            status: (key.currentStatus || 'available') as any,
-            pegIndex: key.pegIndex
-          }
-        });
+        const keyRef = doc(firestore, 'keys', key.id || key.keyIdentifier);
+        await setDoc(keyRef, {
+          keyIdentifier: key.keyIdentifier,
+          description: key.description,
+          location: key.location,
+          currentStatus: key.currentStatus || 'available',
+          pegIndex: key.pegIndex,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
       }
 
       setStatus('success');

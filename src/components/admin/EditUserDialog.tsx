@@ -22,7 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Pencil, Loader2, Save, Hash, GraduationCap, BadgeCheck } from 'lucide-react';
 import { useUser } from '@/lib/auth-provider';
-import { api } from '@/lib/hono-client';
+import { writeLog } from '@/firebase/rtdb';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfile, UserRole } from '@/lib/types';
 
@@ -42,6 +44,7 @@ export function EditUserDialog({ userProfile }: EditUserDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   
   const { user: currentUser } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,20 +87,20 @@ export function EditUserDialog({ userProfile }: EditUserDialogProps) {
         staffId: (role === 'staff' || role === 'admin') ? (staffId || null) : null,
       };
 
-      await api.users[':id'].$patch({
-        param: { id: userProfile.id },
-        json: updateData
+      if (!firestore) throw new Error('Firestore not initialized');
+
+      const userRef = doc(firestore, 'user_profiles', userProfile.id);
+      await updateDoc(userRef, {
+        ...updateData,
+        updatedAt: new Date().toISOString()
       });
 
       // Log the changes if role changed
       if (role !== userProfile.role && currentUser) {
-        await api.logs.$post({
-          json: {
-            type: 'USER_MGMT',
-            message: `Admin Override: Role of ${fullName} changed from ${userProfile.role} to ${role}`,
-            userId: currentUser.id,
-            userName: currentUser.user_metadata?.full_name || 'Admin',
-          }
+        await writeLog('USER_MGMT', {
+          message: `Admin Override: Role of ${fullName} changed from ${userProfile.role} to ${role}`,
+          userId: currentUser.id || (currentUser as any).uid,
+          userName: currentUser.user_metadata?.full_name || currentUser.email || 'Admin',
         });
       }
 

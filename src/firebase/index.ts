@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, initializeFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -31,6 +31,9 @@ export function getSdks(firebaseApp: FirebaseApp) {
     // Force long polling for studio environments to avoid WebSocket/API key issues
     firestore = initializeFirestore(firebaseApp, {
       experimentalForceLongPolling: true,
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
     });
   } catch (e) {
     firestore = getFirestore(firebaseApp);

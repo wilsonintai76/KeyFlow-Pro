@@ -1,3 +1,6 @@
+#ifndef HARDWARE_HANDLER_H
+#define HARDWARE_HANDLER_H
+
 #include <Adafruit_NeoPixel.h>
 #include "config.h"
 
@@ -32,6 +35,15 @@ namespace Hardware {
     Serial.println("Hardware initialized (AIoT S3 Mode).");
   }
 
+  unsigned long unlockEndTime = 0;
+  bool unlockActive = false;
+  unsigned long lastBlinkTime = 0;
+  bool blinkState = false;
+
+  void beep(int frequency, int duration) {
+    tone(BUZZER_PIN, frequency, duration);
+  }
+
   void testFeedback() {
     Serial.println("Running Hardware Diagnostic Test...");
 
@@ -41,13 +53,9 @@ namespace Hardware {
     digitalWrite(STATUS_LED_PIN, LOW);
 
     // Test Buzzer (D12)
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(100);
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
+    beep(1000, 100);
+    delay(150);
+    beep(1200, 100);
 
     // Test RGB LED (D46) - Red, Green, Blue cycle
     pixel.setPixelColor(0, pixel.Color(255, 0, 0)); // Red
@@ -65,24 +73,56 @@ namespace Hardware {
     Serial.println("Diagnostic Test Complete.");
   }
 
-  void unlockCabinet(unsigned int delayMs = 3000) {
-    Serial.println("Unlocking cabinet...");
-    digitalWrite(SOLENOID_PIN, HIGH);
-    
-    // RGB Feedback: Green while unlocked
-    pixel.setPixelColor(0, pixel.Color(0, 255, 0));
-    pixel.show();
+  void unlockCabinet(unsigned int durationMs = 60000) {
+    if (!unlockActive) {
+      Serial.println("Unlocking cabinet...");
+      
+      // Audible Unlock Feedback
+      beep(1500, 100); delay(150);
+      beep(1500, 100); 
 
-    delay(delayMs);
-    
-    digitalWrite(SOLENOID_PIN, LOW);
-    pixel.clear();
-    pixel.show();
-    Serial.println("Cabinet locked again.");
+      digitalWrite(SOLENOID_PIN, HIGH);
+      digitalWrite(STATUS_LED_PIN, HIGH);
+
+      unlockEndTime = millis() + durationMs;
+      unlockActive = true;
+      lastBlinkTime = millis();
+    }
+  }
+
+  void update() {
+    if (unlockActive) {
+      // 1. Check for relock timeout
+      if (millis() >= unlockEndTime) {
+        digitalWrite(SOLENOID_PIN, LOW);
+        digitalWrite(STATUS_LED_PIN, LOW);
+        
+        // Audible Lock Feedback
+        beep(800, 300);
+        
+        unlockActive = false;
+        Serial.println("Cabinet locked again.");
+      } 
+      else {
+        // 2. Visual Blinking Feedback while unlocked
+        if (millis() - lastBlinkTime > 250) {
+          lastBlinkTime = millis();
+          blinkState = !blinkState;
+          digitalWrite(STATUS_LED_PIN, blinkState ? HIGH : LOW);
+        }
+      }
+    }
+  }
+
+  bool isLocked() {
+    return !unlockActive;
   }
 
   bool isDoorOpen() {
-    return digitalRead(DOOR_PIN) == HIGH;
+    // If we are currently in the 1-minute unlock window, report as "Open" 
+    // even if the physical sensor isn't connected.
+    if (unlockActive) return true;
+    return digitalRead(DOOR_PIN) == HIGH; // Original hardware logic
   }
 
   bool isKeyPresent() {

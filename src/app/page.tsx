@@ -42,7 +42,8 @@ export default function Home() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  // Spark Plan Optimized: Auto sign-out after 15 mins inactivity to close listeners
+  // STABILITY: Inactivity timer disabled temporarily to debug session flapping
+  /*
   useEffect(() => {
     if (!user || !auth) return;
     let timeoutId: NodeJS.Timeout;
@@ -69,6 +70,7 @@ export default function Home() {
       events.forEach(event => document.removeEventListener(event, handleActivity));
     };
   }, [user, auth, toast]);
+  */
 
   const profileDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -173,6 +175,7 @@ export default function Home() {
   };
 
   if (isUserLoading || (user && isProfileLoading)) {
+    console.log("[AUTH DIAGNOSTIC] Loading state active:", { isUserLoading, hasUser: !!user, isProfileLoading });
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="animate-spin text-primary w-10 h-10" />
@@ -181,6 +184,7 @@ export default function Home() {
   }
 
   if (!user) {
+    console.log("[AUTH DIAGNOSTIC] No user detected - showing login screen.");
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-10 bg-slate-50">
         <div className="bg-primary text-white p-7 rounded-[2.5rem] shadow-2xl">
@@ -203,6 +207,9 @@ export default function Home() {
         >
           {isSigningIn ? <Loader2 className="animate-spin text-primary" /> : "Continue with Google"}
         </Button>
+        <div className="pt-2 text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+          {process.env.NEXT_PUBLIC_APP_VERSION} ({new Date(process.env.NEXT_PUBLIC_BUILD_TIME || '').toLocaleString('en-MY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })})
+        </div>
       </div>
     );
   }
