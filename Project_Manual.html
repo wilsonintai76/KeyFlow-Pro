@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyMaster Pro - System Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            background-color: #f8fafc;
+        }
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+        }
+        .prose h1 { 
+            font-size: 2.25rem; line-height: 2.5rem; font-weight: 900; color: #0f172a; margin-bottom: 2rem; letter-spacing: -0.025em; 
+        }
+        .prose h2 { 
+            font-size: 1.5rem; line-height: 2rem; font-weight: 800; color: #1e293b; margin-top: 3rem; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; 
+        }
+        .prose h3 { 
+            font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; color: #334155; margin-top: 2rem; margin-bottom: 1rem; 
+        }
+        .prose p { 
+            color: #475569; border-bottom: none; line-height: 1.625; margin-bottom: 1rem; 
+        }
+        .prose ul { 
+            list-style-type: disc; list-style-position: inside; margin-bottom: 1rem; 
+        }
+        .prose li {
+            margin-bottom: 0.5rem; color: #475569;
+        }
+        .prose table { 
+            width: 100%; border-collapse: collapse; margin-bottom: 2rem; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); 
+        }
+        .prose th { 
+            background-color: #f1f5f9; color: #334155; font-weight: 700; padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; 
+        }
+        .prose td { 
+            padding: 0.75rem; border-bottom: 1px solid #f8fafc; color: #475569; 
+        }
+        .prose code { 
+            background-color: #f1f5f9; padding: 0.125rem 0.375rem; border-radius: 0.25rem; color: #e11d48; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.875rem; 
+        }
+        .prose pre { 
+            background-color: #0f172a; color: #e2e8f0; padding: 1.5rem; border-radius: 1rem; overflow-x: auto; margin-top: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
+        }
+        .prose blockquote { 
+            border-left: 4px solid #3b82f6; background-color: rgba(59, 130, 246, 0.05); padding: 1rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; margin-top: 1.5rem; margin-bottom: 1.5rem; 
+        }
+        
+        @media print {
+            .no-print { display: none; }
+            body { background-color: white; }
+            .prose pre { background-color: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; box-shadow: none; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-12 lg:p-24">
+    <div class="max-w-4xl mx-auto bg-white p-12 md:p-20 rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
+        
+        <header class="mb-16 text-center">
+            <div class="inline-block bg-slate-900 text-white p-4 rounded-3xl mb-6 shadow-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>
+            </div>
+            <h1 class="text-5xl font-black text-slate-900 tracking-tight">KeyMaster <span class="text-primary text-blue-600">Pro</span></h1>
+            <p class="text-slate-500 font-medium mt-4">Professional Staff Key Management System</p>
+            <div class="mt-8 flex justify-center gap-3">
+                <span class="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border border-blue-100">System Manual</span>
+                <span class="bg-slate-50 text-slate-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border border-slate-100">v1.2.0</span>
+            </div>
+        </header>
+
+        <div class="prose max-w-none">
+            
+            <p>**KeyMaster Pro** is a high-performance, real-time cabinet management system built with **Next.js 15**, **Firebase**, and **ESP32** hardware. It provides intelligent staff key management with sub-second latency, designed for reliability on the **Firebase Spark Plan**.</p>
+
+            <h2>🚀 Key Features</h2>
+            <ul>
+                <li><strong>⚡ Real-time Access:</strong> Instant solenoid trigger via Firebase Realtime Database (RTDB).</li>
+                <li><strong>👥 User Management:</strong> Secure Role-Based Access Control (Admin, Staff, Guest) with Google SSO.</li>
+                <li><strong>📋 Smart Inventory:</strong> Live tracking of 10 individual key slots with assignment history.</li>
+                <li><strong>📜 System Audit:</strong> High-efficiency historical logging of all unlocks and system events.</li>
+                <li><strong>📱 Mobile-First UI:</strong> Beautiful, responsive dashboard built with Tailwind CSS and Shadcn UI.</li>
+                <li><strong>📡 Robust IoT:</strong> ESP32 firmware with WiFi Captive Portal for easy network provisioning.</li>
+            </ul>
+
+            <h2>🏗️ System Architecture</h2>
+            <div class="flex justify-center py-8 bg-white rounded-3xl border shadow-xl my-10">
+                <img src="public/system_architecture.png" alt="System Architecture Diagram" class="max-w-full rounded-2xl">
+            </div>
+
+            <div class="page-break"></div>
+
+            <h2>🗼 Hardware Connections (Maker Feather AIoT S3)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>GPIO Pin</th>
+                        <th>Mode</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Cabinet Lock</strong></td><td><strong>4</strong></td><td>OUTPUT</td><td>Solenoid Signal</td></tr>
+                    <tr><td><strong>Door Switch</strong></td><td><strong>5</strong></td><td>INPUT</td><td>Hall Effect / Micro-switch</td></tr>
+                    <tr><td><strong>Master Key</strong></td><td><strong>6</strong></td><td>INPUT</td><td>Presence & Reset Trigger</td></tr>
+                    <tr><td><strong>Buzzer</strong></td><td><strong>12</strong></td><td>OUTPUT</td><td>Audible Feedback</td></tr>
+                    <tr><td><strong>Status LED</strong></td><td><strong>2</strong></td><td>OUTPUT</td><td>Visual Feedback</td></tr>
+                    <tr><td><strong>RGB LED</strong></td><td><strong>46</strong></td><td>DATA</td><td>WS2812B (RGB Status)</td></tr>
+                    <tr><td><strong>Key Pegs</strong></td><td><strong>7-39*</strong></td><td>INPUT</td><td>10 Individual Slots</td></tr>
+                </tbody>
+            </table>
+
+            <h2>📶 WiFi Setup Instructions</h2>
+            <ol class="list-decimal list-inside space-y-4 text-slate-600">
+                <li>Power on the hardware and wait for the RGB LED to pulse blue.</li>
+                <li>Connect to the WiFi hotspot named <strong>`KeyMaster_Setup`</strong> using your phone or laptop.</li>
+                <li>The portal should open automatically. Select your local WiFi and enter the password.</li>
+                <li>The system will reboot and connect to the cloud.</li>
+            </ol>
+
+            <blockquote>
+                <strong>Manual WiFi Reset:</strong> To clear saved credentials, hold down the <strong>Master Key</strong> in slot 1 while powering on the device.
+            </blockquote>
+
+            <h2>📦 Getting Started</h2>
+            <h3>Web Application</h3>
+            <pre><code># 1. Install dependencies
+npm install
+
+# 2. Run locally
+npm run dev
+
+# 3. Deploy
+firebase deploy</code></pre>
+
+            <h3>Firmware</h3>
+            <p>Flash using Arduino IDE or PlatformIO. Ensure <code>WiFiManager</code> and <code>Firebase-ESP-Client</code> libraries are installed. Select <strong>Maker Feather AIoT S3</strong> as the board.</p>
+
+        </div>
+
+        <footer class="mt-24 pt-12 border-t text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+            Internal Documentation &copy; 2026 KeyMaster Pro
+        </footer>
+    </div>
+
+    <div class="fixed bottom-10 right-10 no-print">
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-3xl shadow-2xl transition-all active:scale-95 font-black flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-printer"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5"/><rect x="6" y="14" width="12" height="8" rx="2"/></svg>
+            PRINT TO PDF
+        </button>
+    </div>
+    </div>
+</body>
+</html>
