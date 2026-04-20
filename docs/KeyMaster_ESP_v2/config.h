@@ -3,11 +3,17 @@
 
 /* 1. Network: Captive Portal Configuration */
 #define AP_NAME "KeyMaster_Setup"
-#define PORTAL_TIMEOUT 180  // Seconds (3 minutes) before automatic closing
+#define PORTAL_TIMEOUT 0    // 0 = Stay active forever while disconnected
+
 
 /* 2. Firebase Configuration */
 #define API_KEY "AIzaSyDlHVttSl9_kpg0oSnb2H06GmO1tFUXlEk"
-#define DATABASE_URL "https://keymaster-pro-182e7-default-rtdb.firebaseio.com"
+#define DATABASE_URL "https://keymaster-pro-182e7-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+#define FIREBASE_AUTH "u6FuRJvA6qELbiqwLDEQa6O2OxOtkfAKdzRU6xT0"
+
+
+
 
 /* 3. Hardware Pin Definitions for Maker Feather AIoT S3 */
 const int SOLENOID_PIN = 4;     // Solenoid trigger
@@ -24,8 +30,11 @@ const int BUZZER_PIN = 12;
 #define VPERIPHERAL_PIN 11 // Enable peripheral power (Active HIGH)
 
 /* 5. Time Configuration (NTP) */
-#define NTP_SERVER "pool.ntp.org"
+#define NTP_SERVER_1 "pool.ntp.org"
+#define NTP_SERVER_2 "time.google.com"
+#define NTP_SERVER_3 "time.windows.com"
 #define GMT_OFFSET_SEC 28800 // GMT+8 (8 * 3600)
 #define DAYLIGHT_OFFSET_SEC 0
+
 
 #endif

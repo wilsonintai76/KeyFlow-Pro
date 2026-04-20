@@ -9,7 +9,9 @@ export interface UserProfile {
   registrationNumber?: string;
   studentClass?: string;
   staffId?: string;
+  pin?: string; // 4-digit PIN for offline access
 }
+
 
 export type KeyStatus = 'available' | 'checked_out' | 'overdue';
 

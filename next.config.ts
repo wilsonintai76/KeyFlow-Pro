@@ -1,7 +1,12 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
   output: 'export',
   typescript: {
     ignoreBuildErrors: true,
@@ -10,10 +15,11 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   env: {
-    NEXT_PUBLIC_APP_VERSION: '0.1.0',
+    NEXT_PUBLIC_APP_VERSION: '2.2.0-offline',
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
   images: {
+    unoptimized: true, // Required for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -37,4 +43,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

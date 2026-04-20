@@ -2,10 +2,15 @@
   "rules": {
     "live": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      "cabinet": {
+        ".write": "auth != null && (auth.token.email === 'wilsonintai76@gmail.com' || auth.token.email === 'cabinet@keymaster.pro')"
+      },
+      "cabinet_unlock": {
+        ".write": "auth != null"
+      }
     },
     "log": {
-      ".read": "auth != null",
+      ".read": "auth != null && (auth.token.email === 'wilsonintai76@gmail.com' || auth.token.email === 'cabinet@keymaster.pro')",
       ".write": "auth != null",
       "$log_id": {
         ".validate": "!data.exists() || (data.child('timestamp').val() == newData.child('timestamp').val())"

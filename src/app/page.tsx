@@ -10,6 +10,8 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { SystemSettings } from '@/components/admin/SystemSettings';
 import { ComplaintManager } from '@/components/admin/ComplaintManager';
 import { AuditLog } from '@/components/admin/AuditLog';
+import { HardwareSync } from '@/components/admin/HardwareSync';
+
 import { AddKeyDialog } from '@/components/inventory/AddKeyDialog';
 import { UserProfileDialog } from '@/components/profile/UserProfileDialog';
 import { ReportProblemDialog } from '@/components/profile/ReportProblemDialog';
@@ -270,16 +272,20 @@ export default function Home() {
           {isAdminUser ? (
             <Tabs defaultValue="system">
               <div className="px-5 pt-4">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-100 rounded-2xl h-12">
+                <TabsList className="grid w-full grid-cols-4 bg-slate-100 rounded-2xl h-12">
                   <TabsTrigger value="system" className="rounded-xl text-[10px] font-black uppercase">Hub</TabsTrigger>
+                  <TabsTrigger value="hardware" className="rounded-xl text-[10px] font-black uppercase">Sync</TabsTrigger>
                   <TabsTrigger value="audit" className="rounded-xl text-[10px] font-black uppercase">Logs</TabsTrigger>
                   <TabsTrigger value="complaints" className="rounded-xl text-[10px] font-black uppercase relative">
                     Issues {pendingComplaintsCount > 0 && <span className="ml-1 text-rose-500">•</span>}
                   </TabsTrigger>
                 </TabsList>
+
               </div>
               <TabsContent value="system"><SystemSettings /></TabsContent>
+              <TabsContent value="hardware"><HardwareSync /></TabsContent>
               <TabsContent value="audit"><AuditLog /></TabsContent>
+
               <TabsContent value="complaints"><ComplaintManager /></TabsContent>
             </Tabs>
           ) : <div className="p-12 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">Restricted Access</div>}

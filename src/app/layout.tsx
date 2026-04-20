@@ -2,6 +2,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
+import { ConnectivityBanner } from '@/components/layout/ConnectivityBanner';
+
 
 export const viewport: Viewport = {
   themeColor: '#144b89',
@@ -36,12 +38,17 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/keymaster/180/180" />
+        <link rel="apple-touch-icon" href="/icon-512.png" />
+
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          {children}
+          <ConnectivityBanner />
+          <div className="pt-0"> {/* Banner is fixed, layout handles transition */}
+            {children}
+          </div>
         </FirebaseClientProvider>
+
       </body>
     </html>
   );

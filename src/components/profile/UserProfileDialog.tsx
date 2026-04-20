@@ -9,6 +9,8 @@ import { Phone, Save, Loader2, User } from 'lucide-react';
 import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useConnectivity } from '@/hooks/use-connectivity';
+
 
 interface UserProfileDialogProps {
   userId: string;
@@ -17,10 +19,15 @@ interface UserProfileDialogProps {
 export function UserProfileDialog({ userId }: UserProfileDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { syncUserToHardware, isHardwareReachable } = useConnectivity();
+
   
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const [pin, setPin] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
@@ -33,19 +40,35 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
     if (profile) {
       if (profile.fullName) setFullName(profile.fullName);
       if (profile.phoneNumber) setPhoneNumber(profile.phoneNumber);
+      if (profile.staffId) setStaffId(profile.staffId);
+      if (profile.pin) setPin(profile.pin);
     }
   }, [profile]);
+
 
   const handleSave = () => {
     if (!firestore || !userId || !userDocRef) return;
     setIsSaving(true);
 
-    setDocumentNonBlocking(userDocRef, {
+    const profileData = {
       id: userId,
       fullName,
       phoneNumber,
+      staffId,
+      pin,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+
+    setDocumentNonBlocking(userDocRef, profileData, { merge: true });
+
+    // If hardware is reachable, try auto-sync
+    if (isHardwareReachable) {
+      syncUserToHardware({ ...profileData, role: profile?.role || 'staff' }).then(result => {
+        if (result.success) {
+          toast({ title: "Hardware Synced", description: "Your PIN is now active on the cabinet." });
+        }
+      });
+    }
 
     setTimeout(() => {
       setIsSaving(false);
@@ -54,6 +77,7 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
         description: "Your information has been saved successfully.",
       });
     }, 500);
+
   };
 
   if (isLoading) {
@@ -100,6 +124,33 @@ export function UserProfileDialog({ userId }: UserProfileDialogProps) {
             />
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="staffId" className="text-xs font-bold uppercase text-muted-foreground">Staff ID (4 Digits)</Label>
+            <Input 
+              id="staffId" 
+              maxLength={4}
+              inputMode="numeric"
+              value={staffId}
+              onChange={(e) => setStaffId(e.target.value.replace(/\D/g, ''))}
+              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent font-mono font-bold"
+              placeholder="0000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pin" className="text-xs font-bold uppercase text-muted-foreground">4-Digit PIN</Label>
+            <Input 
+              id="pin" 
+              maxLength={4}
+              inputMode="numeric"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              className="bg-slate-50 border-slate-100 h-11 focus-visible:ring-accent font-mono font-bold tracking-[0.3em] overflow-visible"
+              placeholder="••••"
+            />
+          </div>
+        </div>
+
         <Button 
           onClick={handleSave} 
           disabled={isSaving}
